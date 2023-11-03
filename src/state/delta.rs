@@ -51,20 +51,9 @@ impl State {
         let port_changes = get_hashmap_differences(&self.ports, &other.ports);
         let subsystem_changes = get_hashmap_differences(&self.subsystems, &other.subsystems);
 
-        // Add Ports not in base.
-        for added in port_changes.added.iter() {
-            deltas.push(StateDelta::AddPort(
-                *added,
-                other.ports.get(&added).unwrap().clone(),
-            ));
-        }
-
-        // Update Ports.
-        for updated in port_changes.changed.iter() {
-            deltas.push(StateDelta::UpdatePort(
-                *updated,
-                other.ports.get(&updated).unwrap().clone(),
-            ));
+        // Delete Ports not in new.
+        for removed in port_changes.removed.iter() {
+            deltas.push(StateDelta::DelPort(*removed));
         }
 
         // Delete Subsystems not in new.
@@ -80,6 +69,14 @@ impl State {
             ));
         }
 
+        // Update Ports.
+        for updated in port_changes.changed.iter() {
+            deltas.push(StateDelta::UpdatePort(
+                *updated,
+                other.ports.get(&updated).unwrap().clone(),
+            ));
+        }
+
         // Add Subsystems not in base.
         for added in subsystem_changes.added.iter() {
             deltas.push(StateDelta::AddSubsystem(
@@ -88,9 +85,12 @@ impl State {
             ));
         }
 
-        // Delete Ports not in new.
-        for removed in port_changes.removed.iter() {
-            deltas.push(StateDelta::DelPort(*removed));
+        // Add Ports not in base.
+        for added in port_changes.added.iter() {
+            deltas.push(StateDelta::AddPort(
+                *added,
+                other.ports.get(&added).unwrap().clone(),
+            ));
         }
 
         deltas
@@ -196,12 +196,12 @@ mod tests {
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 0);
 
-        new_state.ports.insert(1, Port::new(true, PortType::Loop));
+        new_state.ports.insert(1, Port::new(PortType::Loop, vec![]));
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
         assert_eq!(
             deltas[0],
-            StateDelta::AddPort(1, Port::new(true, PortType::Loop))
+            StateDelta::AddPort(1, Port::new(PortType::Loop, vec![]))
         );
 
         base_state = new_state.clone();
@@ -210,7 +210,7 @@ mod tests {
 
         new_state.ports.insert(
             1,
-            Port::new(true, PortType::Tcp("127.0.0.1:4420".parse().unwrap())),
+            Port::new(PortType::Tcp("127.0.0.1:4420".parse().unwrap()), vec![]),
         );
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
@@ -218,7 +218,7 @@ mod tests {
             deltas[0],
             StateDelta::UpdatePort(
                 1,
-                Port::new(true, PortType::Tcp("127.0.0.1:4420".parse().unwrap()))
+                Port::new(PortType::Tcp("127.0.0.1:4420".parse().unwrap()), vec![])
             )
         );
 

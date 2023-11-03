@@ -31,15 +31,19 @@ pub struct Namespace {
     pub device_uuid: Uuid,
     pub device_nguid: Uuid,
 }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Port {
-    pub enabled: bool,
     pub port_type: PortType,
+    pub subsystems: HashSet<String>,
 }
 
 impl Port {
-    pub fn new(enabled: bool, port_type: PortType) -> Self {
-        Self { enabled, port_type }
+    pub fn new(port_type: PortType, subsystems: Vec<String>) -> Self {
+        Self {
+            port_type,
+            subsystems: HashSet::from_iter(subsystems),
+        }
     }
 }
 
@@ -68,7 +72,7 @@ impl FibreChannelAddr {
 }
 
 impl FromStr for FibreChannelAddr {
-    type Err = std::num::ParseIntError;
+    type Err = crate::errors::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // The traddr looks like this:
@@ -88,7 +92,7 @@ impl FromStr for FibreChannelAddr {
                 wwpn: u64::from_str_radix(&s[21..28], 16)?,
             })
         } else {
-            todo!("No error handling for invalid fibre channel addresses");
+            Err(Self::Err::InvalidFCAddr(s.to_string()))
         }
     }
 }
