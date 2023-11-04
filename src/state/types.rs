@@ -28,8 +28,8 @@ pub struct Subsystem {
 pub struct Namespace {
     pub enabled: bool,
     pub device_path: String,
-    pub device_uuid: Uuid,
-    pub device_nguid: Uuid,
+    pub device_uuid: Option<Uuid>,
+    pub device_nguid: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,10 +39,10 @@ pub struct Port {
 }
 
 impl Port {
-    pub fn new(port_type: PortType, subsystems: Vec<String>) -> Self {
+    pub fn new(port_type: PortType, subsystems: HashSet<String>) -> Self {
         Self {
             port_type,
-            subsystems: HashSet::from_iter(subsystems),
+            subsystems,
         }
     }
 }

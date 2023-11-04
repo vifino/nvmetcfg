@@ -6,6 +6,6 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
-clap = "4.4.7"
+clap = { version = "4.4.7", features = ["derive"] }
 thiserror = "1.0.50"
 uuid = "1.5.0"
