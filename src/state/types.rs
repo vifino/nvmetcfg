@@ -4,7 +4,7 @@
 // TODO: serde to store the representation
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     net::SocketAddr,
     str::FromStr,
 };
@@ -12,16 +12,16 @@ use uuid::Uuid;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct State {
-    pub subsystems: HashMap<String, Subsystem>,
-    pub ports: HashMap<u32, Port>,
+    pub subsystems: BTreeMap<String, Subsystem>,
+    pub ports: BTreeMap<u32, Port>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Subsystem {
     pub model: Option<String>,
     pub serial: Option<String>,
-    pub allowed_hosts: HashSet<String>,
-    pub namespaces: HashMap<u32, Namespace>,
+    pub allowed_hosts: BTreeSet<String>,
+    pub namespaces: BTreeMap<u32, Namespace>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,11 +35,11 @@ pub struct Namespace {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Port {
     pub port_type: PortType,
-    pub subsystems: HashSet<String>,
+    pub subsystems: BTreeSet<String>,
 }
 
 impl Port {
-    pub fn new(port_type: PortType, subsystems: HashSet<String>) -> Self {
+    pub fn new(port_type: PortType, subsystems: BTreeSet<String>) -> Self {
         Self {
             port_type,
             subsystems,

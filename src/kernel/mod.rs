@@ -3,7 +3,7 @@ pub(super) mod sysfs;
 use crate::errors::*;
 use crate::helpers::assert_valid_nqn;
 use crate::state::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use sysfs::*;
 
 pub struct KernelConfig {}
@@ -25,7 +25,7 @@ impl KernelConfig {
         // Gather subsystems.
         for subsystem in NvmetRoot::list_subsystems()? {
             // Gather namespaces of subsystem.
-            let mut namespaces = HashMap::<u32, Namespace>::new();
+            let mut namespaces = BTreeMap::<u32, Namespace>::new();
             for (nsid, nvmetns) in subsystem.list_namespaces()? {
                 let ns = nvmetns.get_namespace()?;
                 namespaces.insert(nsid, ns);
@@ -58,7 +58,7 @@ impl KernelConfig {
                     if !NvmetRoot::has_port(id)? {
                         return Err(Error::NoSuchPort(id));
                     }
-                    let p = NvmetRoot::create_port(id)?;
+                    let p = NvmetRoot::open_port(id)?;
                     for delta in deltas {
                         match delta {
                             PortDelta::UpdatePortType(pt) => p.set_type(pt)?,
@@ -89,16 +89,19 @@ impl KernelConfig {
                     if !NvmetRoot::has_subsystem(&nqn)? {
                         return Err(Error::NoSuchSubsystem(nqn.to_string()));
                     }
-                    let nvmetsub = NvmetRoot::create_subsystem(&nqn)?;
+                    let nvmetsub = NvmetRoot::open_subsystem(&nqn)?;
                     for delta in deltas {
                         match delta {
                             SubsystemDelta::UpdateModel(model) => nvmetsub.set_model(&model)?,
                             SubsystemDelta::UpdateSerial(serial) => nvmetsub.set_serial(&serial)?,
                             SubsystemDelta::AddHost(host) => nvmetsub.enable_host(&host)?,
                             SubsystemDelta::RemoveHost(host) => nvmetsub.disable_host(&host)?,
-                            SubsystemDelta::AddNamespace(nsid, ns)
-                            | SubsystemDelta::UpdateNamespace(nsid, ns) => {
+                            SubsystemDelta::AddNamespace(nsid, ns) => {
                                 let nvmetns = nvmetsub.create_namespace(nsid)?;
+                                nvmetns.set_namespace(&ns)?;
+                            }
+                            SubsystemDelta::UpdateNamespace(nsid, ns) => {
+                                let nvmetns = nvmetsub.open_namespace(nsid)?;
                                 nvmetns.set_namespace(&ns)?;
                             }
                             SubsystemDelta::RemoveNamespace(nsid) => {

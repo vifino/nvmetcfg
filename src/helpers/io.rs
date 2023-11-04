@@ -12,6 +12,8 @@ pub(crate) fn read_str<P: AsRef<Path>>(path: P) -> Result<String> {
 
 pub(crate) fn write_str<P: AsRef<Path>, D: std::fmt::Display>(path: P, data: D) -> Result<()> {
     let mut file = File::create(path)?;
-    write!(file, "{}\n", data)?;
+    // Unfortunately, we need to write in a single write call.
+    let value = format!("{}", data);
+    file.write_all(value.as_bytes())?;
     Ok(())
 }

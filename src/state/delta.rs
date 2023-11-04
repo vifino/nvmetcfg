@@ -1,5 +1,5 @@
 use super::types::*;
-use crate::helpers::get_hashmap_differences;
+use crate::helpers::get_btreemap_differences;
 
 // Define the representation of differences to the state.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,8 +17,8 @@ impl State {
     pub fn get_deltas(&self, other: &Self) -> Vec<StateDelta> {
         let mut deltas = Vec::new();
 
-        let port_changes = get_hashmap_differences(&self.ports, &other.ports);
-        let subsystem_changes = get_hashmap_differences(&self.subsystems, &other.subsystems);
+        let port_changes = get_btreemap_differences(&self.ports, &other.ports);
+        let subsystem_changes = get_btreemap_differences(&self.subsystems, &other.subsystems);
 
         // Delete Ports not in new.
         for removed in port_changes.removed.iter() {
@@ -119,7 +119,7 @@ impl Subsystem {
     pub fn get_deltas(&self, other: &Self) -> Vec<SubsystemDelta> {
         let mut deltas = Vec::new();
 
-        let namespace_changes = get_hashmap_differences(&self.namespaces, &other.namespaces);
+        let namespace_changes = get_btreemap_differences(&self.namespaces, &other.namespaces);
 
         // Updated model
         if self.model != other.model {
@@ -173,7 +173,7 @@ impl Subsystem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::{HashSet};
+    use std::collections::{BTreeSet};
 
     #[test]
     fn test_state_get_deltas_port() {
@@ -186,12 +186,12 @@ mod tests {
 
         new_state
             .ports
-            .insert(1, Port::new(PortType::Loop, HashSet::new()));
+            .insert(1, Port::new(PortType::Loop, BTreeSet::new()));
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
         assert_eq!(
             deltas[0],
-            StateDelta::AddPort(1, Port::new(PortType::Loop, HashSet::new()))
+            StateDelta::AddPort(1, Port::new(PortType::Loop, BTreeSet::new()))
         );
 
         base_state = new_state.clone();
@@ -202,7 +202,7 @@ mod tests {
             1,
             Port::new(
                 PortType::Tcp("127.0.0.1:4420".parse().unwrap()),
-                HashSet::new(),
+                BTreeSet::new(),
             ),
         );
         deltas = base_state.get_deltas(&new_state);

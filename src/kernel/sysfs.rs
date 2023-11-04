@@ -1,10 +1,10 @@
 use crate::errors::{Error, Result};
 use crate::helpers::{
-    assert_valid_model, assert_valid_nqn, assert_valid_serial, get_hashmap_differences, read_str,
+    assert_valid_model, assert_valid_nqn, assert_valid_serial, get_btreemap_differences, read_str,
     write_str,
 };
 use crate::state::{Namespace, PortType};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
@@ -22,11 +22,11 @@ impl NvmetRoot {
         }
     }
 
-    pub(super) fn list_hosts() -> Result<HashSet<String>> {
+    pub(super) fn list_hosts() -> Result<BTreeSet<String>> {
         let path = Path::new(NVMET_ROOT).join("hosts");
         let paths = std::fs::read_dir(path)?;
 
-        let mut hosts = HashSet::new();
+        let mut hosts = BTreeSet::new();
         for wpath in paths {
             let path = wpath?;
             hosts.insert(path.file_name().to_str().unwrap().to_owned());
@@ -60,10 +60,14 @@ impl NvmetRoot {
         let path = Path::new(NVMET_ROOT).join("ports").join(format!("{}", id));
         Ok(path.try_exists()?)
     }
-    pub(super) fn create_port(id: u32) -> Result<NvmetPort> {
+    pub(super) fn open_port(id: u32) -> Result<NvmetPort> {
         let path = Path::new(NVMET_ROOT).join("ports").join(format!("{}", id));
-        std::fs::create_dir(path.clone())?;
         Ok(NvmetPort { id, path })
+    }
+    pub(super) fn create_port(id: u32) -> Result<NvmetPort> {
+        let port = Self::open_port(id)?;
+        std::fs::create_dir(port.path.clone())?;
+        Ok(port)
     }
     pub(super) fn delete_port(id: u32) -> Result<()> {
         let path = Path::new(NVMET_ROOT).join("ports").join(format!("{}", id));
@@ -103,14 +107,18 @@ impl NvmetRoot {
         let path = Path::new(NVMET_ROOT).join("subsystems").join(&nqn);
         Ok(path.try_exists()?)
     }
-    pub(super) fn create_subsystem(nqn: &str) -> Result<NvmetSubsystem> {
+    pub(super) fn open_subsystem(nqn: &str) -> Result<NvmetSubsystem> {
         assert_valid_nqn(nqn)?;
         let path = Path::new(NVMET_ROOT).join("subsystems").join(&nqn);
-        std::fs::create_dir(path.clone())?;
         Ok(NvmetSubsystem {
             nqn: nqn.to_string(),
             path,
         })
+    }
+    pub(super) fn create_subsystem(nqn: &str) -> Result<NvmetSubsystem> {
+        let sub = Self::open_subsystem(nqn)?;
+        std::fs::create_dir(sub.path.clone())?;
+        Ok(sub)
     }
     pub(super) fn delete_subsystem(nqn: &str) -> Result<()> {
         assert_valid_nqn(nqn)?;
@@ -156,6 +164,10 @@ impl NvmetPort {
         }
     }
     pub(super) fn set_type(&self, port_type: PortType) -> Result<()> {
+        // Remove all subsystems in order to unlock.
+        let subs = self.list_subsystems()?;
+        self.set_subsystems(BTreeSet::new())?;
+
         match port_type {
             PortType::Loop => {
                 write_str(self.path.join("addr_trtype"), "loop")?;
@@ -167,6 +179,7 @@ impl NvmetPort {
                 } else {
                     write_str(self.path.join("addr_adrfam"), "ipv4")?;
                 }
+                write_str(self.path.join("addr_traddr"), saddr.ip())?;
                 write_str(self.path.join("addr_trsvcid"), saddr.port())?;
             }
             PortType::Rdma(saddr) => {
@@ -176,6 +189,7 @@ impl NvmetPort {
                 } else {
                     write_str(self.path.join("addr_adrfam"), "ipv4")?;
                 }
+                write_str(self.path.join("addr_traddr"), saddr.ip())?;
                 write_str(self.path.join("addr_trsvcid"), saddr.port())?;
             }
             PortType::FibreChannel(fcaddr) => {
@@ -184,14 +198,16 @@ impl NvmetPort {
                 write_str(self.path.join("addr_traddr"), fcaddr.to_traddr())?;
             }
         }
+        // Re-add all the previously enabled subsystems.
+        self.set_subsystems(subs)?;
         Ok(())
     }
 
-    pub(super) fn list_subsystems(&self) -> Result<HashSet<String>> {
+    pub(super) fn list_subsystems(&self) -> Result<BTreeSet<String>> {
         let path = self.path.join("subsystems");
         let paths = std::fs::read_dir(path)?;
 
-        let mut subsystems = HashSet::new();
+        let mut subsystems = BTreeSet::new();
         for wpath in paths {
             let path = wpath?;
             subsystems.insert(path.file_name().to_str().unwrap().to_owned());
@@ -205,7 +221,7 @@ impl NvmetPort {
     }
     pub(super) fn delete_subsystem(&self, nqn: &str) -> Result<()> {
         let path = self.path.join("subsystems").join(nqn);
-        std::fs::remove_dir(path)?;
+        std::fs::remove_file(path)?;
         Ok(())
     }
     pub(super) fn create_subsystem(&self, nqn: &str) -> Result<()> {
@@ -215,14 +231,14 @@ impl NvmetPort {
         if !sub.try_exists()? {
             return Err(Error::NoSuchSubsystem(nqn.to_string()));
         }
-        std::os::unix::fs::symlink(path, sub)?;
+        std::os::unix::fs::symlink(sub, path)?;
         Ok(())
     }
 
-    pub(super) fn set_subsystems(&self, desired: HashSet<String>) -> Result<()> {
-        let actual = HashSet::from_iter(self.list_subsystems()?);
+    pub(super) fn set_subsystems(&self, desired: BTreeSet<String>) -> Result<()> {
+        let actual = BTreeSet::from_iter(self.list_subsystems()?);
         let added = desired.difference(&actual);
-        let removed = desired.difference(&actual);
+        let removed = actual.difference(&desired);
 
         for sub in removed {
             self.delete_subsystem(sub)?;
@@ -250,11 +266,11 @@ impl NvmetSubsystem {
         Ok(())
     }
 
-    pub(super) fn list_hosts(&self) -> Result<HashSet<String>> {
+    pub(super) fn list_hosts(&self) -> Result<BTreeSet<String>> {
         let path = self.path.join("allowed_hosts");
         let paths = std::fs::read_dir(path)?;
 
-        let mut hosts = HashSet::new();
+        let mut hosts = BTreeSet::new();
         for wpath in paths {
             let path = wpath?;
             hosts.insert(path.file_name().to_str().unwrap().to_owned());
@@ -268,15 +284,15 @@ impl NvmetSubsystem {
         if !host.try_exists()? {
             std::fs::create_dir(host.clone())?;
         }
-        std::os::unix::fs::symlink(path, host)?;
+        std::os::unix::fs::symlink(host, path)?;
         Ok(())
     }
     pub(super) fn disable_host(&self, nqn: &str) -> Result<()> {
         let path = self.path.join("allowed_hosts").join(nqn);
-        std::fs::remove_dir(path)?;
+        std::fs::remove_file(path)?;
         Ok(())
     }
-    pub(super) fn set_hosts(&self, hosts: HashSet<String>) -> Result<()> {
+    pub(super) fn set_hosts(&self, hosts: BTreeSet<String>) -> Result<()> {
         let current_hosts = self.list_hosts()?;
         let added_hosts = hosts.difference(&current_hosts);
         let removed_hosts = current_hosts.difference(&hosts);
@@ -292,11 +308,11 @@ impl NvmetSubsystem {
         Ok(())
     }
 
-    pub(super) fn list_namespaces(&self) -> Result<HashMap<u32, NvmetNamespace>> {
+    pub(super) fn list_namespaces(&self) -> Result<BTreeMap<u32, NvmetNamespace>> {
         let path = self.path.join("namespaces");
         let paths = std::fs::read_dir(path)?;
 
-        let mut nses = HashMap::new();
+        let mut nses = BTreeMap::new();
         for wpath in paths {
             let path = wpath?;
             let nsid = path.file_name().to_str().unwrap().parse()?;
@@ -308,6 +324,11 @@ impl NvmetSubsystem {
         let path = self.path.join("namespaces").join(format!("{}", nsid));
         std::fs::create_dir(path.clone())?;
         Ok(NvmetNamespace { path: path.clone() })
+    }
+    pub(super) fn open_namespace(&self, nsid: u32) -> Result<NvmetNamespace> {
+        let ns = self.create_namespace(nsid)?;
+        std::fs::create_dir(ns.path.clone())?;
+        Ok(ns)
     }
     pub(super) fn delete_namespace(&self, nsid: u32) -> Result<()> {
         let path = self.path.join("namespaces").join(format!("{}", nsid));
@@ -321,14 +342,14 @@ impl NvmetSubsystem {
         std::fs::remove_dir(path)?;
         Ok(())
     }
-    pub(super) fn set_namespaces(&self, nses: HashMap<u32, Namespace>) -> Result<()> {
+    pub(super) fn set_namespaces(&self, nses: BTreeMap<u32, Namespace>) -> Result<()> {
         // TODO: slightly inefficient as it fetches data for to-be-removed namespaces too
         // Utterly irrelevant though.
-        let mut current = HashMap::new();
+        let mut current = BTreeMap::new();
         for (id, nvmetns) in self.list_namespaces()? {
             current.insert(id, nvmetns.get_namespace()?);
         }
-        let delta = get_hashmap_differences(&current, &nses);
+        let delta = get_btreemap_differences(&current, &nses);
 
         for nsid in delta.removed {
             self.delete_namespace(nsid)?;
