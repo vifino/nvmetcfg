@@ -1,3 +1,5 @@
+pub use anyhow::Result;
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("IO Error")]
@@ -33,5 +35,3 @@ pub enum Error {
     #[error("Invalid UUID")]
     InvalidUuid(#[from] uuid::Error),
 }
-
-pub type Result<T> = std::result::Result<T, Error>;

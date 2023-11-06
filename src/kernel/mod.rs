@@ -3,6 +3,7 @@ pub(super) mod sysfs;
 use crate::errors::*;
 use crate::helpers::assert_valid_nqn;
 use crate::state::*;
+use anyhow::Context;
 use std::collections::BTreeMap;
 use sysfs::*;
 
@@ -56,14 +57,16 @@ impl KernelConfig {
                 }
                 StateDelta::UpdatePort(id, deltas) => {
                     if !NvmetRoot::has_port(id)? {
-                        return Err(Error::NoSuchPort(id));
+                        return Err(Error::NoSuchPort(id).into());
                     }
                     let p = NvmetRoot::open_port(id)?;
                     for delta in deltas {
                         match delta {
-                            PortDelta::UpdatePortType(pt) => p.set_type(pt)?,
-                            PortDelta::AddSubsystem(nqn) => p.create_subsystem(&nqn)?,
-                            PortDelta::RemoveSubsystem(nqn) => p.delete_subsystem(&nqn)?,
+                            PortDelta::UpdatePortType(pt) => p.set_type(pt).with_context(|| {
+                                format!("Failed to update port type of port {}", id)
+                            })?,
+                            PortDelta::AddSubsystem(nqn) => p.enable_subsystem(&nqn)?,
+                            PortDelta::RemoveSubsystem(nqn) => p.disable_subsystem(&nqn)?,
                         }
                     }
                 }
@@ -73,7 +76,7 @@ impl KernelConfig {
 
                 StateDelta::AddSubsystem(nqn, sub) => {
                     if NvmetRoot::has_subsystem(&nqn)? {
-                        return Err(Error::ExistingSubsystem(nqn.to_string()));
+                        return Err(Error::ExistingSubsystem(nqn).into());
                     }
                     let nvmetsub = NvmetRoot::create_subsystem(&nqn)?;
                     if let Some(model) = sub.model {
@@ -87,7 +90,7 @@ impl KernelConfig {
                 }
                 StateDelta::UpdateSubsystem(nqn, deltas) => {
                     if !NvmetRoot::has_subsystem(&nqn)? {
-                        return Err(Error::NoSuchSubsystem(nqn.to_string()));
+                        return Err(Error::NoSuchSubsystem(nqn).into());
                     }
                     let nvmetsub = NvmetRoot::open_subsystem(&nqn)?;
                     for delta in deltas {
@@ -112,17 +115,17 @@ impl KernelConfig {
                 }
                 StateDelta::RemoveSubsystem(nqn) => {
                     if !NvmetRoot::has_subsystem(&nqn)? {
-                        return Err(Error::NoSuchSubsystem(nqn.to_string()));
+                        return Err(Error::NoSuchSubsystem(nqn).into());
                     }
 
                     // Fetch global hosts just before we remove the subsystem.
                     let prev_hosts = NvmetRoot::list_hosts()?;
-                    let our_hosts = NvmetRoot::create_subsystem(&nqn)?.list_hosts()?;
+                    let our_hosts = NvmetRoot::open_subsystem(&nqn)?.list_hosts()?;
 
                     // Before removing the subsystem, we need to remove all references to it.
                     for port in NvmetRoot::list_ports()? {
                         if port.has_subsystem(&nqn)? {
-                            port.delete_subsystem(&nqn)?;
+                            port.disable_subsystem(&nqn).with_context(|| format!("Failed to disable subsystem from all ports before removing subsystem {}", nqn))?;
                         }
                     }
 
@@ -132,7 +135,12 @@ impl KernelConfig {
                     let current_hosts = NvmetRoot::list_hosts()?;
                     for unused_host in prev_hosts.difference(&current_hosts) {
                         if our_hosts.contains(unused_host) {
-                            NvmetRoot::remove_host(&unused_host)?;
+                            NvmetRoot::remove_host(&unused_host).with_context(|| {
+                                format!(
+                                    "Failed to remove unused hosts after deletion of subsystem {}",
+                                    nqn
+                                )
+                            })?;
                         }
                     }
                 }

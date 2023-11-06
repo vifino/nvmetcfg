@@ -6,6 +6,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     net::SocketAddr,
+    path::PathBuf,
     str::FromStr,
 };
 use uuid::Uuid;
@@ -27,7 +28,7 @@ pub struct Subsystem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Namespace {
     pub enabled: bool,
-    pub device_path: String,
+    pub device_path: PathBuf,
     pub device_uuid: Option<Uuid>,
     pub device_nguid: Option<Uuid>,
 }
