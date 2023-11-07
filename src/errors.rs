@@ -14,8 +14,12 @@ pub enum Error {
     UnsupportedTrType(String),
     #[error("Failed to parse IP address")]
     InvalidIPAddr(#[from] std::net::AddrParseError),
-    #[error("Invalid FibreChannel addr_traddr: {0}")]
+    #[error("Invalid FibreChannel addr_traddr: expected format nn-0x1000000044001123:pn-0x2000000055001123 or nn-1000000044001123:pn-2000000055001123: {0}")]
     InvalidFCAddr(String),
+    #[error("Invalid Fibre Channel WWNN: {0}")]
+    InvalidFCWWNN(String),
+    #[error("Invalid Fibre Channel WWPN: {0}")]
+    InvalidFCWWPN(String),
     #[error("No port with ID {0}")]
     NoSuchPort(u32),
     #[error("No subsystem with NQN {0}")]

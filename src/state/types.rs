@@ -3,6 +3,8 @@
 
 // TODO: serde to store the representation
 
+use crate::errors::Error;
+use anyhow::Context;
 use std::{
     collections::{BTreeMap, BTreeSet},
     net::SocketAddr,
@@ -73,27 +75,30 @@ impl FibreChannelAddr {
 }
 
 impl FromStr for FibreChannelAddr {
-    type Err = crate::errors::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // The traddr looks like this:
         // nn-0x1000000044001123:pn-0x2000000055001123
         // OR
         // nn-1000000044001123:pn-2000000055001123
-        // TODO: ERROR HANDLING. YIKES.
 
         if s.len() == 7 + 4 + 32 {
             Ok(Self {
-                wwnn: u64::from_str_radix(&s[5..21], 16)?,
-                wwpn: u64::from_str_radix(&s[27..43], 16)?,
+                wwnn: u64::from_str_radix(&s[5..21], 16)
+                    .with_context(|| Error::InvalidFCWWNN(s[5..21].to_string()))?,
+                wwpn: u64::from_str_radix(&s[27..43], 16)
+                    .with_context(|| Error::InvalidFCWWPN(s[27..43].to_string()))?,
             })
         } else if s.len() == 7 + 32 {
             Ok(Self {
-                wwnn: u64::from_str_radix(&s[3..20], 16)?,
-                wwpn: u64::from_str_radix(&s[21..28], 16)?,
+                wwnn: u64::from_str_radix(&s[3..20], 16)
+                    .with_context(|| Error::InvalidFCWWNN(s[3..20].to_string()))?,
+                wwpn: u64::from_str_radix(&s[21..28], 16)
+                    .with_context(|| Error::InvalidFCWWNN(s[21..28].to_string()))?,
             })
         } else {
-            Err(Self::Err::InvalidFCAddr(s.to_string()))
+            Err(Error::InvalidFCAddr(s.to_string()).into())
         }
     }
 }
