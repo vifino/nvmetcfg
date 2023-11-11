@@ -7,7 +7,7 @@ use nvmetcfg::state::{Port, PortDelta, PortType, StateDelta};
 use std::collections::BTreeSet;
 
 #[derive(Subcommand)]
-pub(super) enum CliPortCommands {
+pub enum CliPortCommands {
     /// Show detailed Port information.
     Show,
     /// List only the Port names.
@@ -59,7 +59,7 @@ pub(super) enum CliPortCommands {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub(super) enum CliPortType {
+pub enum CliPortType {
     /// Loopback NVMe Device (for testing)
     Loop,
     /// NVMe over TCP
@@ -73,25 +73,25 @@ pub(super) enum CliPortType {
 impl CliPortCommands {
     pub(super) fn parse(command: Self) -> Result<()> {
         match command {
-            CliPortCommands::List => {
+            Self::List => {
                 let state = KernelConfig::gather_state()?;
                 for (id, _) in state.ports {
-                    println!("{}", id);
+                    println!("{id}");
                 }
             }
-            CliPortCommands::Show => {
+            Self::Show => {
                 let state = KernelConfig::gather_state()?;
                 println!("Configured ports: {}", state.ports.len());
                 for (id, port) in state.ports {
-                    println!("Port {}:", id);
+                    println!("Port {id}:");
                     println!("\tType: {:?}", port.port_type);
                     println!("\tSubsystems: {}", port.subsystems.len());
                     for sub in port.subsystems {
-                        println!("\t\t{}", sub);
+                        println!("\t\t{sub}");
                     }
                 }
             }
-            CliPortCommands::Add {
+            Self::Add {
                 existing,
                 pid,
                 port_type,
@@ -114,27 +114,27 @@ impl CliPortCommands {
                 };
                 KernelConfig::apply_delta(state_delta)?;
             }
-            CliPortCommands::Remove { pid } => {
+            Self::Remove { pid } => {
                 KernelConfig::apply_delta(vec![StateDelta::RemovePort(pid)])?;
             }
-            CliPortCommands::ListSubsystems { pid } => {
+            Self::ListSubsystems { pid } => {
                 let state = KernelConfig::gather_state()?;
                 if let Some(port) = state.ports.get(&pid) {
                     for sub in &port.subsystems {
-                        println!("{}", sub);
+                        println!("{sub}");
                     }
                 } else {
                     return Err(Error::NoSuchPort(pid))?;
                 }
             }
-            CliPortCommands::AddSubsystem { pid, sub } => {
+            Self::AddSubsystem { pid, sub } => {
                 assert_valid_nqn(&sub)?;
                 KernelConfig::apply_delta(vec![StateDelta::UpdatePort(
                     pid,
                     vec![PortDelta::AddSubsystem(sub)],
                 )])?;
             }
-            CliPortCommands::RemoveSubsystem { pid, sub } => {
+            Self::RemoveSubsystem { pid, sub } => {
                 assert_valid_nqn(&sub)?;
                 KernelConfig::apply_delta(vec![StateDelta::UpdatePort(
                     pid,

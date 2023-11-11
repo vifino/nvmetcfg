@@ -1,7 +1,8 @@
-use crate::errors::*;
+use crate::errors::{Error, Result};
 use uuid::Uuid;
 
-pub(crate) fn is_ascii_only(data: &str) -> bool {
+#[must_use]
+pub fn is_ascii_only(data: &str) -> bool {
     for c in data.chars() {
         if !c.is_ascii() && !c.is_ascii_control() {
             return false;
@@ -11,7 +12,7 @@ pub(crate) fn is_ascii_only(data: &str) -> bool {
 }
 
 pub fn assert_valid_nqn(nqn: &str) -> Result<()> {
-    if !is_ascii_only(&nqn) {
+    if !is_ascii_only(nqn) {
         Err(Error::NQNNotAscii(nqn.to_string()).into())
     } else if nqn.len() > 223 {
         Err(Error::NQNTooLong(nqn.to_string()).into())
@@ -35,7 +36,7 @@ pub fn assert_compliant_nqn(nqn: &str) -> Result<()> {
         Err(Error::NQNMissingNQN(nqn.to_string()).into())
     } else if let Some(uuid) = nqn.strip_prefix("nqn.2014-08.org.nvmexpress:uuid:") {
         // NQN is a UUID. So we should ensure it's valid.
-        if let Err(_) = Uuid::try_parse(uuid) {
+        if Uuid::try_parse(uuid).is_err() {
             Err(Error::NQNUuidInvalid(uuid.to_string()).into())
         } else {
             Ok(())
@@ -63,7 +64,7 @@ pub fn assert_valid_serial(model: &str) -> Result<()> {
 }
 
 pub fn assert_valid_nsid(nsid: u32) -> Result<()> {
-    if nsid == 0 || nsid == 0xffffffff {
+    if nsid == 0 || nsid == 0xffff_ffff {
         Err(Error::InvalidNamespaceID(nsid).into())
     } else {
         Ok(())

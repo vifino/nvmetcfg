@@ -1,11 +1,11 @@
 pub(super) mod sysfs;
 
-use crate::errors::*;
+use crate::errors::{Error, Result};
 use crate::helpers::assert_valid_nqn;
-use crate::state::*;
+use crate::state::{Namespace, Port, PortDelta, State, StateDelta, Subsystem, SubsystemDelta};
 use anyhow::Context;
 use std::collections::BTreeMap;
-use sysfs::*;
+use sysfs::NvmetRoot;
 
 pub struct KernelConfig {}
 
@@ -53,17 +53,17 @@ impl KernelConfig {
                     for sub in &port.subsystems {
                         assert_valid_nqn(sub)?;
                     }
-                    p.set_subsystems(port.subsystems)?;
+                    p.set_subsystems(&port.subsystems)?;
                 }
                 StateDelta::UpdatePort(id, deltas) => {
                     if !NvmetRoot::has_port(id)? {
                         return Err(Error::NoSuchPort(id).into());
                     }
-                    let p = NvmetRoot::open_port(id)?;
+                    let p = NvmetRoot::open_port(id);
                     for delta in deltas {
                         match delta {
                             PortDelta::UpdatePortType(pt) => p.set_type(pt).with_context(|| {
-                                format!("Failed to update port type of port {}", id)
+                                format!("Failed to update port type of port {id}")
                             })?,
                             PortDelta::AddSubsystem(nqn) => p.enable_subsystem(&nqn)?,
                             PortDelta::RemoveSubsystem(nqn) => p.disable_subsystem(&nqn)?,
@@ -85,8 +85,8 @@ impl KernelConfig {
                     if let Some(serial) = sub.serial {
                         nvmetsub.set_serial(&serial)?;
                     }
-                    nvmetsub.set_namespaces(sub.namespaces)?;
-                    nvmetsub.set_hosts(sub.allowed_hosts)?;
+                    nvmetsub.set_namespaces(&sub.namespaces)?;
+                    nvmetsub.set_hosts(&sub.allowed_hosts)?;
                 }
                 StateDelta::UpdateSubsystem(nqn, deltas) => {
                     if !NvmetRoot::has_subsystem(&nqn)? {
@@ -108,7 +108,7 @@ impl KernelConfig {
                                 nvmetns.set_namespace(&ns)?;
                             }
                             SubsystemDelta::RemoveNamespace(nsid) => {
-                                nvmetsub.delete_namespace(nsid)?
+                                nvmetsub.delete_namespace(nsid)?;
                             }
                         }
                     }
@@ -125,7 +125,7 @@ impl KernelConfig {
                     // Before removing the subsystem, we need to remove all references to it.
                     for port in NvmetRoot::list_ports()? {
                         if port.has_subsystem(&nqn)? {
-                            port.disable_subsystem(&nqn).with_context(|| format!("Failed to disable subsystem from all ports before removing subsystem {}", nqn))?;
+                            port.disable_subsystem(&nqn).with_context(|| format!("Failed to disable subsystem from all ports before removing subsystem {nqn}"))?;
                         }
                     }
 
@@ -135,10 +135,9 @@ impl KernelConfig {
                     let current_hosts = NvmetRoot::list_hosts()?;
                     for unused_host in prev_hosts.difference(&current_hosts) {
                         if our_hosts.contains(unused_host) {
-                            NvmetRoot::remove_host(&unused_host).with_context(|| {
+                            NvmetRoot::remove_host(unused_host).with_context(|| {
                                 format!(
-                                    "Failed to remove unused hosts after deletion of subsystem {}",
-                                    nqn
+                                    "Failed to remove unused hosts after deletion of subsystem {nqn}"
                                 )
                             })?;
                         }

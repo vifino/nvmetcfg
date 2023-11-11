@@ -7,7 +7,7 @@ use nvmetcfg::state::{StateDelta, Subsystem, SubsystemDelta};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Subcommand)]
-pub(super) enum CliSubsystemCommands {
+pub enum CliSubsystemCommands {
     /// Show detailed Subsystem information.
     Show,
     /// List only the Subsystem names.
@@ -59,38 +59,38 @@ pub(super) enum CliSubsystemCommands {
 impl CliSubsystemCommands {
     pub(super) fn parse(command: Self) -> Result<()> {
         match command {
-            CliSubsystemCommands::Show => {
+            Self::Show => {
                 let state = KernelConfig::gather_state()?;
                 println!("Configured subsystems: {}", state.subsystems.len());
                 for (nqn, sub) in state.subsystems {
-                    println!("Subsystem: {}", nqn);
+                    println!("Subsystem: {nqn}");
                     // TODO: this is not exactly true. :(
                     // We don't represent attr_allow_any_host in our abstraction.
                     // Perhaps we should make allowed_hosts Option<...>?
                     // That'd require some rework for sure..
-                    println!("\tAllow Any Host: {}", sub.allowed_hosts.len() == 0);
-                    if sub.allowed_hosts.len() != 0 {
+                    println!("\tAllow Any Host: {}", sub.allowed_hosts.is_empty());
+                    if !sub.allowed_hosts.is_empty() {
                         println!("\tNumber of allowed Hosts: {}", sub.allowed_hosts.len());
                         println!("\tAllowed Hosts:");
                         for host in sub.allowed_hosts {
-                            println!("\t\t{}", host);
+                            println!("\t\t{host}");
                         }
                     }
                     println!("\tNumber of Namespaces: {}", sub.namespaces.len());
                     print!("\tNamespaces:");
                     for (nsid, _ns) in sub.namespaces {
-                        print!(" {}", nsid)
+                        print!(" {nsid}");
                     }
                     println!();
                 }
             }
-            CliSubsystemCommands::List => {
+            Self::List => {
                 let state = KernelConfig::gather_state()?;
                 for (nqn, _) in state.subsystems {
-                    println!("{}", nqn);
+                    println!("{nqn}");
                 }
             }
-            CliSubsystemCommands::Add { sub, model, serial } => {
+            Self::Add { sub, model, serial } => {
                 assert_compliant_nqn(&sub)?;
                 KernelConfig::apply_delta(vec![StateDelta::AddSubsystem(
                     sub,
@@ -102,22 +102,22 @@ impl CliSubsystemCommands {
                     },
                 )])?;
             }
-            CliSubsystemCommands::Remove { sub } => {
+            Self::Remove { sub } => {
                 assert_valid_nqn(&sub)?;
                 KernelConfig::apply_delta(vec![StateDelta::RemoveSubsystem(sub)])?;
             }
-            CliSubsystemCommands::ListHosts { sub } => {
+            Self::ListHosts { sub } => {
                 assert_valid_nqn(&sub)?;
                 let state = KernelConfig::gather_state()?;
                 if let Some(subsystem) = state.subsystems.get(&sub) {
                     for host in &subsystem.allowed_hosts {
-                        println!("{}", host);
+                        println!("{host}");
                     }
                 } else {
                     return Err(Error::NoSuchSubsystem(sub).into());
                 }
             }
-            CliSubsystemCommands::AddHost { sub, host } => {
+            Self::AddHost { sub, host } => {
                 assert_valid_nqn(&sub)?;
                 assert_valid_nqn(&host)?;
                 KernelConfig::apply_delta(vec![StateDelta::UpdateSubsystem(
@@ -125,7 +125,7 @@ impl CliSubsystemCommands {
                     vec![SubsystemDelta::AddHost(host)],
                 )])?;
             }
-            CliSubsystemCommands::RemoveHost { sub, host } => {
+            Self::RemoveHost { sub, host } => {
                 assert_valid_nqn(&sub)?;
                 assert_valid_nqn(&host)?;
                 KernelConfig::apply_delta(vec![StateDelta::UpdateSubsystem(

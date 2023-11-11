@@ -1,4 +1,4 @@
-use super::types::*;
+use super::types::{Namespace, Port, PortType, State, Subsystem};
 use crate::helpers::get_btreemap_differences;
 
 // Define the representation of differences to the state.
@@ -14,6 +14,7 @@ pub enum StateDelta {
 }
 
 impl State {
+    #[must_use]
     pub fn get_deltas(&self, other: &Self) -> Vec<StateDelta> {
         let mut deltas = Vec::new();
 
@@ -21,17 +22,17 @@ impl State {
         let subsystem_changes = get_btreemap_differences(&self.subsystems, &other.subsystems);
 
         // Delete Ports not in new.
-        for removed in port_changes.removed.iter() {
+        for removed in &port_changes.removed {
             deltas.push(StateDelta::RemovePort(*removed));
         }
 
         // Delete Subsystems not in new.
-        for removed in subsystem_changes.removed.iter() {
+        for removed in &subsystem_changes.removed {
             deltas.push(StateDelta::RemoveSubsystem(removed.to_string()));
         }
 
         // Update Subsystems
-        for updated in subsystem_changes.changed.iter() {
+        for updated in &subsystem_changes.changed {
             deltas.push(StateDelta::UpdateSubsystem(
                 updated.to_string(),
                 self.subsystems
@@ -42,7 +43,7 @@ impl State {
         }
 
         // Add Subsystems not in base.
-        for added in subsystem_changes.added.iter() {
+        for added in &subsystem_changes.added {
             deltas.push(StateDelta::AddSubsystem(
                 added.to_string(),
                 other.subsystems.get(added).unwrap().clone(),
@@ -50,21 +51,21 @@ impl State {
         }
 
         // Update Ports.
-        for updated in port_changes.changed.iter() {
+        for updated in &port_changes.changed {
             deltas.push(StateDelta::UpdatePort(
                 *updated,
                 self.ports
                     .get(updated)
                     .unwrap()
-                    .get_deltas(other.ports.get(&updated).unwrap()),
+                    .get_deltas(other.ports.get(updated).unwrap()),
             ));
         }
 
         // Add Ports not in base.
-        for added in port_changes.added.iter() {
+        for added in &port_changes.added {
             deltas.push(StateDelta::AddPort(
                 *added,
-                other.ports.get(&added).unwrap().clone(),
+                other.ports.get(added).unwrap().clone(),
             ));
         }
 
@@ -80,6 +81,7 @@ pub enum PortDelta {
 }
 
 impl Port {
+    #[must_use]
     pub fn get_deltas(&self, other: &Self) -> Vec<PortDelta> {
         let mut deltas = Vec::new();
 
@@ -90,7 +92,7 @@ impl Port {
 
         // Updated Port Type.
         if self.port_type != other.port_type {
-            deltas.push(PortDelta::UpdatePortType(other.port_type.clone()));
+            deltas.push(PortDelta::UpdatePortType(other.port_type));
         }
 
         // Add subsystems not in self.
@@ -116,6 +118,7 @@ pub enum SubsystemDelta {
 }
 
 impl Subsystem {
+    #[must_use]
     pub fn get_deltas(&self, other: &Self) -> Vec<SubsystemDelta> {
         let mut deltas = Vec::new();
 
@@ -141,12 +144,12 @@ impl Subsystem {
         }
 
         // Delete namespaces not in other.
-        for removed in namespace_changes.removed.iter() {
+        for removed in &namespace_changes.removed {
             deltas.push(SubsystemDelta::RemoveNamespace(*removed));
         }
 
         // Update namespaces.
-        for updated in namespace_changes.changed.iter() {
+        for updated in &namespace_changes.changed {
             deltas.push(SubsystemDelta::UpdateNamespace(
                 *updated,
                 other.namespaces.get(updated).unwrap().clone(),
@@ -154,7 +157,7 @@ impl Subsystem {
         }
 
         // Add new namespaces.
-        for added in namespace_changes.added.iter() {
+        for added in &namespace_changes.added {
             deltas.push(SubsystemDelta::AddNamespace(
                 *added,
                 other.namespaces.get(added).unwrap().clone(),

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 #[derive(Subcommand)]
-pub(super) enum CliNamespaceCommands {
+pub enum CliNamespaceCommands {
     /// Show detailed information about the Namespaces of a Subsystem.
     Show {
         /// NVMe Qualified Name of the Subsystem.
@@ -56,13 +56,13 @@ pub(super) enum CliNamespaceCommands {
 impl CliNamespaceCommands {
     pub(super) fn parse(command: Self) -> Result<()> {
         match command {
-            CliNamespaceCommands::Show { sub } => {
+            Self::Show { sub } => {
                 assert_valid_nqn(&sub)?;
                 let state = KernelConfig::gather_state()?;
                 if let Some(subsystem) = state.subsystems.get(&sub) {
                     println!("Number of Namespaces: {}", subsystem.namespaces.len());
                     for (nsid, ns) in &subsystem.namespaces {
-                        println!("Namespace {}:", nsid);
+                        println!("Namespace {nsid}:");
                         println!("\tEnabled: {}", ns.enabled);
                         println!("\tDevice Path: {}", ns.device_path.display());
                         println!(
@@ -78,18 +78,18 @@ impl CliNamespaceCommands {
                     return Err(Error::NoSuchSubsystem(sub).into());
                 }
             }
-            CliNamespaceCommands::List { sub } => {
+            Self::List { sub } => {
                 assert_valid_nqn(&sub)?;
                 let state = KernelConfig::gather_state()?;
                 if let Some(subsystem) = state.subsystems.get(&sub) {
-                    for (nsid, _ns) in &subsystem.namespaces {
-                        println!("{}", nsid);
+                    for nsid in subsystem.namespaces.keys() {
+                        println!("{nsid}");
                     }
                 } else {
                     return Err(Error::NoSuchSubsystem(sub).into());
                 }
             }
-            CliNamespaceCommands::Add {
+            Self::Add {
                 sub,
                 nsid,
                 path,
@@ -109,7 +109,7 @@ impl CliNamespaceCommands {
                     vec![SubsystemDelta::AddNamespace(nsid, new_ns)],
                 )])?;
             }
-            CliNamespaceCommands::Remove { sub, nsid } => {
+            Self::Remove { sub, nsid } => {
                 assert_valid_nqn(&sub)?;
                 KernelConfig::apply_delta(vec![StateDelta::UpdateSubsystem(
                     sub,

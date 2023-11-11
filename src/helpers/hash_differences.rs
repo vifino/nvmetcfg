@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Default)]
 pub struct BTreeSetDelta<K> {
@@ -7,16 +7,17 @@ pub struct BTreeSetDelta<K> {
     pub added: BTreeSet<K>,
 }
 
+#[must_use]
 pub fn get_btreeset_differences<K>(base: &BTreeSet<K>, new: &BTreeSet<K>) -> BTreeSetDelta<K>
 where
     K: Eq + std::hash::Hash + Clone + Ord + Default,
 {
     let mut delta = BTreeSetDelta::default();
     for base_key in base {
-        if !new.contains(base_key) {
-            delta.removed.insert(base_key.clone());
-        } else {
+        if new.contains(base_key) {
             delta.same.insert(base_key.clone());
+        } else {
+            delta.removed.insert(base_key.clone());
         }
     }
 
@@ -36,7 +37,11 @@ pub struct BTreeMapDelta<K> {
     pub added: BTreeSet<K>,
 }
 
-pub fn get_btreemap_differences<K, V>(base: &BTreeMap<K, V>, new: &BTreeMap<K, V>) -> BTreeMapDelta<K>
+#[must_use]
+pub fn get_btreemap_differences<K, V>(
+    base: &BTreeMap<K, V>,
+    new: &BTreeMap<K, V>,
+) -> BTreeMapDelta<K>
 where
     V: Eq,
     K: Eq + std::hash::Hash + Ord + Clone + Default,

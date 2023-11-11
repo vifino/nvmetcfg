@@ -42,7 +42,8 @@ pub struct Port {
 }
 
 impl Port {
-    pub fn new(port_type: PortType, subsystems: BTreeSet<String>) -> Self {
+    #[must_use]
+    pub const fn new(port_type: PortType, subsystems: BTreeSet<String>) -> Self {
         Self {
             port_type,
             subsystems,
@@ -65,10 +66,12 @@ pub struct FibreChannelAddr {
 }
 
 impl FibreChannelAddr {
-    pub fn new(wwnn: u64, wwpn: u64) -> Self {
+    #[must_use]
+    pub const fn new(wwnn: u64, wwpn: u64) -> Self {
         Self { wwnn, wwpn }
     }
 
+    #[must_use]
     pub fn to_traddr(&self) -> String {
         format!("nn-{:#018x}:pn-{:#018x}", self.wwnn, self.wwpn)
     }
@@ -110,7 +113,7 @@ mod tests {
     #[test]
     fn test_fcaddr() {
         let traddr = "nn-0x1000000044001123:pn-0x2000000055001123";
-        let addr = FibreChannelAddr::new(0x1000000044001123, 0x2000000055001123);
+        let addr = FibreChannelAddr::new(0x1000_0000_4400_1123, 0x2000_0000_5500_1123);
         assert_eq!(traddr.parse::<FibreChannelAddr>().unwrap(), addr);
         assert_eq!(addr.to_traddr(), traddr);
     }
