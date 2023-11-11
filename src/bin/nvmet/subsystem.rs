@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Subcommand;
 use nvmetcfg::errors::Error;
-use nvmetcfg::helpers::assert_valid_nqn;
+use nvmetcfg::helpers::{assert_compliant_nqn, assert_valid_nqn};
 use nvmetcfg::kernel::KernelConfig;
 use nvmetcfg::state::{StateDelta, Subsystem, SubsystemDelta};
 use std::collections::{BTreeMap, BTreeSet};
@@ -14,7 +14,14 @@ pub(super) enum CliSubsystemCommands {
     List,
     /// Create a new Subsystem.
     Add {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
+        /// This should follow the supported formats in the NVMe specification.
+        ///
+        /// Examples:
+        ///
+        /// - nqn.2014-08.com.example:nvme.host.sys.xyz
+        ///
+        /// - nqn.2014-08.org.nvmexpress:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
         sub: String,
 
         // Set the model.
@@ -25,26 +32,26 @@ pub(super) enum CliSubsystemCommands {
     },
     /// Remove an existing Subsystem.
     Remove {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
     },
     /// List the Hosts allowed to use a Subsystem.
     ListHosts {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
     },
     /// Add a Host/Initiator to the whitelist of a Subsystem.
     AddHost {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
-        /// NQN of the Host/Initiator.
+        /// NVMe Qualified Name of the Host/Initiator.
         host: String,
     },
     /// Remove a Host/Initiator from the whitelist of a Subsystem.
     RemoveHost {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
-        /// NQN of the Host/Initiator.
+        /// NVMe Qualified Name of the Host/Initiator.
         host: String,
     },
 }
@@ -84,7 +91,7 @@ impl CliSubsystemCommands {
                 }
             }
             CliSubsystemCommands::Add { sub, model, serial } => {
-                assert_valid_nqn(&sub)?;
+                assert_compliant_nqn(&sub)?;
                 KernelConfig::apply_delta(vec![StateDelta::AddSubsystem(
                     sub,
                     Subsystem {

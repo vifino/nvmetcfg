@@ -4,9 +4,9 @@ use crate::helpers::get_btreemap_differences;
 // Define the representation of differences to the state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StateDelta {
-    AddPort(u32, Port),
-    UpdatePort(u32, Vec<PortDelta>),
-    RemovePort(u32),
+    AddPort(u16, Port),
+    UpdatePort(u16, Vec<PortDelta>),
+    RemovePort(u16),
 
     AddSubsystem(String, Subsystem),
     UpdateSubsystem(String, Vec<SubsystemDelta>),
@@ -173,7 +173,7 @@ impl Subsystem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::{BTreeSet};
+    use std::collections::BTreeSet;
 
     #[test]
     fn test_state_get_deltas_port() {

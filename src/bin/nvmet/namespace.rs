@@ -12,17 +12,17 @@ use uuid::Uuid;
 pub(super) enum CliNamespaceCommands {
     /// Show detailed information about the Namespaces of a Subsystem.
     Show {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
     },
     /// List Namespaces of a Subsystem.
     List {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
     },
     /// Add a namespace to an existing Subsystem.
     Add {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
 
         /// Namespace ID of the new namespace.
@@ -45,7 +45,7 @@ pub(super) enum CliNamespaceCommands {
     },
     /// Remove a Namespace from a Subsystem.
     Remove {
-        /// NQN of the Subsystem.
+        /// NVMe Qualified Name of the Subsystem.
         sub: String,
 
         /// Namespace ID of the namespace to be removed.

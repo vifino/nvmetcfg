@@ -16,7 +16,7 @@ use uuid::Uuid;
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct State {
     pub subsystems: BTreeMap<String, Subsystem>,
-    pub ports: BTreeMap<u32, Port>,
+    pub ports: BTreeMap<u16, Port>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

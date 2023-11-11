@@ -8,8 +8,14 @@ pub enum Error {
     InvalidNumber(#[from] std::num::ParseIntError),
     #[error("/sys/kernel/config/nvmet does not exist. Are the nvmet modules loaded?")]
     NoNvmetSysfs,
-    #[error("NQN is not ASCII-only: {0}")]
+    #[error("NVMe Qualified Name is not ASCII-only: {0}")]
     NQNNotAscii(String),
+    #[error("NVMe Qualified Name is longer than 223 bytes: {0}")]
+    NQNTooLong(String),
+    #[error("NVMe Qualified Name does not start with 'nqn.': {0}")]
+    NQNMissingNQN(String),
+    #[error("NVMe Qualified Name in UUID-Format does not have valid UUID: {0}")]
+    NQNUuidInvalid(String),
     #[error("Unsupported addr_trtype: {0}")]
     UnsupportedTrType(String),
     #[error("Failed to parse IP address")]
@@ -21,11 +27,13 @@ pub enum Error {
     #[error("Invalid Fibre Channel WWPN: {0}")]
     InvalidFCWWPN(String),
     #[error("No port with ID {0}")]
-    NoSuchPort(u32),
+    NoSuchPort(u16),
     #[error("No subsystem with NQN {0}")]
     NoSuchSubsystem(String),
-    #[error("Subsystem with NQN {0} cannot be created, it already exists.")]
+    #[error("Subsystem with NQN {0} cannot be created - it already exists")]
     ExistingSubsystem(String),
+    #[error("Cannot create Subsystem with discovery NQN nqn.2014-08.org.nvmexpress.discovery")]
+    CantCreateDiscovery,
     #[error("Subsystem model is invalid: {0} (ASCII printable characters only and 1-40 bytes)")]
     InvalidModel(String),
     #[error("Subsystem serial is invalid: {0} (ASCII printable characters only and 1-20 bytes)")]
@@ -34,8 +42,12 @@ pub enum Error {
     NoSuchHost(String),
     #[error("Invalid Device: {0}")]
     InvalidDevice(String),
+    #[error("Invalid namespace ID {0} - must not be 0 or NVME_NSID_ALL (4294967295)")]
+    InvalidNamespaceID(u32),
     #[error("No namespace {0} in Subsystem {1}")]
     NoSuchNamespace(u32, String),
+    #[error("Namespace {0} in Subsystem {1} cannot be created - it already exists")]
+    ExistingNamespace(u32, String),
     #[error("Invalid UUID")]
     InvalidUuid(#[from] uuid::Error),
 }

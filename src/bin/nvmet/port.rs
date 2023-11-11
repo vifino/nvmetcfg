@@ -19,7 +19,7 @@ pub(super) enum CliPortCommands {
         existing: bool,
 
         /// Port ID to use.
-        pid: u32,
+        pid: u16,
 
         /// Type of Port.
         port_type: CliPortType,
@@ -35,25 +35,25 @@ pub(super) enum CliPortCommands {
     /// Remove a Port.
     Remove {
         // Port ID to remove.
-        pid: u32,
+        pid: u16,
     },
     /// List the subsystems provided by a Port.
     ListSubsystems {
         /// Port ID.
-        pid: u32,
+        pid: u16,
     },
     /// Add a Subsystem to a Port.
     AddSubsystem {
         /// Port ID.
-        pid: u32,
-        /// NQN of the Subsystem to add.
+        pid: u16,
+        /// NVMe Qualified Name of the Subsystem to add.
         sub: String,
     },
     /// Remove a Subsystem from a Port.
     RemoveSubsystem {
         /// Port ID.
-        pid: u32,
-        /// NQN of the Subsystem to remove.
+        pid: u16,
+        /// NVMe Qualified Name of the Subsystem to remove.
         sub: String,
     },
 }

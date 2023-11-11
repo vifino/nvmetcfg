@@ -1,4 +1,5 @@
 use crate::errors::*;
+use uuid::Uuid;
 
 pub(crate) fn is_ascii_only(data: &str) -> bool {
     for c in data.chars() {
@@ -12,13 +13,42 @@ pub(crate) fn is_ascii_only(data: &str) -> bool {
 pub fn assert_valid_nqn(nqn: &str) -> Result<()> {
     if !is_ascii_only(&nqn) {
         Err(Error::NQNNotAscii(nqn.to_string()).into())
+    } else if nqn.len() > 223 {
+        Err(Error::NQNTooLong(nqn.to_string()).into())
     } else {
         Ok(())
     }
 }
 
+pub fn assert_valid_subsys_name(nqn: &str) -> Result<()> {
+    assert_valid_nqn(nqn)?;
+    if nqn == "nqn.2014-08.org.nvmexpress.discovery" {
+        Err(Error::CantCreateDiscovery.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_compliant_nqn(nqn: &str) -> Result<()> {
+    assert_valid_nqn(nqn)?;
+    if !nqn.starts_with("nqn.") {
+        Err(Error::NQNMissingNQN(nqn.to_string()).into())
+    } else if let Some(uuid) = nqn.strip_prefix("nqn.2014-08.org.nvmexpress:uuid:") {
+        // NQN is a UUID. So we should ensure it's valid.
+        if let Err(_) = Uuid::try_parse(uuid) {
+            Err(Error::NQNUuidInvalid(uuid.to_string()).into())
+        } else {
+            Ok(())
+        }
+    } else {
+        // TODO: check if nqn has nqn.yyyy-mm, some reverse domain and a colon.
+        // we can't make many other assumptions.
+        Ok(())
+    }
+}
+
 pub fn assert_valid_model(model: &str) -> Result<()> {
-    if !is_ascii_only(model) && !model.is_empty() && (model.len() <= 40) {
+    if !is_ascii_only(model) && (model.len() <= 40) {
         Err(Error::InvalidModel(model.to_string()).into())
     } else {
         Ok(())
@@ -27,6 +57,14 @@ pub fn assert_valid_model(model: &str) -> Result<()> {
 pub fn assert_valid_serial(model: &str) -> Result<()> {
     if !is_ascii_only(model) && !model.is_empty() && (model.len() <= 40) {
         Err(Error::InvalidModel(model.to_string()).into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn assert_valid_nsid(nsid: u32) -> Result<()> {
+    if nsid == 0 || nsid == 0xffffffff {
+        Err(Error::InvalidNamespaceID(nsid).into())
     } else {
         Ok(())
     }

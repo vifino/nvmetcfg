@@ -1,11 +1,12 @@
 use crate::errors::{Error, Result};
 use crate::helpers::{
-    assert_valid_model, assert_valid_nqn, assert_valid_serial, get_btreemap_differences, read_str,
-    write_str,
+    assert_valid_model, assert_valid_nqn, assert_valid_nsid, assert_valid_serial,
+    assert_valid_subsys_name, get_btreemap_differences, read_str, write_str,
 };
 use crate::state::{Namespace, PortType};
 use anyhow::Context;
 use std::collections::{BTreeMap, BTreeSet};
+use std::os::unix::fs::FileTypeExt;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
@@ -58,21 +59,21 @@ impl NvmetRoot {
         }
         Ok(ports)
     }
-    pub(super) fn has_port(id: u32) -> Result<bool> {
+    pub(super) fn has_port(id: u16) -> Result<bool> {
         let path = Path::new(NVMET_ROOT).join("ports").join(format!("{}", id));
         Ok(path.try_exists()?)
     }
-    pub(super) fn open_port(id: u32) -> Result<NvmetPort> {
+    pub(super) fn open_port(id: u16) -> Result<NvmetPort> {
         let path = Path::new(NVMET_ROOT).join("ports").join(format!("{}", id));
         Ok(NvmetPort { id, path })
     }
-    pub(super) fn create_port(id: u32) -> Result<NvmetPort> {
+    pub(super) fn create_port(id: u16) -> Result<NvmetPort> {
         let port = Self::open_port(id)?;
         std::fs::create_dir(port.path.clone())
             .with_context(|| format!("Failed to create directory of port {}", id))?;
         Ok(port)
     }
-    pub(super) fn delete_port(id: u32) -> Result<()> {
+    pub(super) fn delete_port(id: u16) -> Result<()> {
         let path = Path::new(NVMET_ROOT).join("ports").join(format!("{}", id));
         if !path.try_exists()? {
             return Err(Error::NoSuchPort(id).into());
@@ -114,7 +115,7 @@ impl NvmetRoot {
         Ok(path.try_exists()?)
     }
     pub(super) fn open_subsystem(nqn: &str) -> Result<NvmetSubsystem> {
-        assert_valid_nqn(nqn)?;
+        assert_valid_subsys_name(nqn)?;
         let path = Path::new(NVMET_ROOT).join("subsystems").join(&nqn);
         Ok(NvmetSubsystem {
             nqn: nqn.to_string(),
@@ -164,7 +165,7 @@ impl NvmetRoot {
 }
 
 pub(super) struct NvmetPort {
-    pub id: u32,
+    pub id: u16,
     path: PathBuf,
 }
 
@@ -214,6 +215,7 @@ impl NvmetPort {
                 write_str(self.path.join("addr_trtype"), "fc")?;
                 write_str(self.path.join("addr_adrfam"), "fc")?;
                 write_str(self.path.join("addr_traddr"), fcaddr.to_traddr())?;
+                write_str(self.path.join("addr_trsvcid"), "none")?;
             }
         }
         // Re-add all the previously enabled subsystems.
@@ -365,6 +367,7 @@ impl NvmetSubsystem {
         Ok(nses)
     }
     pub(super) fn open_namespace(&self, nsid: u32) -> Result<NvmetNamespace> {
+        assert_valid_nsid(nsid)?;
         let path = self.path.join("namespaces").join(format!("{}", nsid));
         Ok(NvmetNamespace {
             path: path.clone(),
@@ -373,6 +376,9 @@ impl NvmetSubsystem {
     }
     pub(super) fn create_namespace(&self, nsid: u32) -> Result<NvmetNamespace> {
         let ns = self.open_namespace(nsid)?;
+        if ns.path.try_exists()? {
+            return Err(Error::ExistingNamespace(nsid, self.nqn.clone()).into());
+        }
         std::fs::create_dir(ns.path.clone()).with_context(|| {
             format!(
                 "Failed to create directory of namespace {} in subsystem {}",
@@ -506,9 +512,9 @@ impl NvmetNamespace {
     }
     pub(super) fn set_device_path(&self, dev: &PathBuf) -> Result<()> {
         let path = Path::new(dev);
-        // TODO: check if it is a *device*, not a file
         // TODO: is it possible to mount a file instead? there is a mysterious "buffered_io" file..
-        if !path.is_file() {
+        let metadata = std::fs::metadata(path)?.file_type();
+        if !metadata.is_block_device() {
             return Err(Error::InvalidDevice(dev.display().to_string()).into());
         }
         write_str(
