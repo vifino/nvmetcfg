@@ -523,7 +523,7 @@ impl NvmetNamespace {
         )?)
     }
     pub(super) fn set_device_uuid(&self, uuid: &Uuid) -> Result<()> {
-        write_str(self.path.join("device_uuid"), uuid.urn()).with_context(|| {
+        write_str(self.path.join("device_uuid"), uuid.hyphenated()).with_context(|| {
             format!(
                 "Failed to set device_uuid {} for namespace {}",
                 uuid, self.nsid
@@ -542,7 +542,7 @@ impl NvmetNamespace {
         )?)
     }
     pub(super) fn set_device_nguid(&self, uuid: &Uuid) -> Result<()> {
-        write_str(self.path.join("device_nguid"), uuid.urn()).with_context(|| {
+        write_str(self.path.join("device_nguid"), uuid.hyphenated()).with_context(|| {
             format!(
                 "Failed to set device_nguid {} for namespace {}",
                 uuid, self.nsid
