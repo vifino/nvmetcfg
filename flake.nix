@@ -21,6 +21,7 @@
         in
         with pkgs;
         {
+          packages.default = pkgs.callPackage ./. {};
           devShells.default = mkShell {
             buildInputs = [ rust-bin.stable.latest.default cargo-bloat ];
           };
