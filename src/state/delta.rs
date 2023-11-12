@@ -86,8 +86,8 @@ impl Port {
         let mut deltas = Vec::new();
 
         // Remove subsystems not in self.
-        for new_sub in other.subsystems.difference(&self.subsystems) {
-            deltas.push(PortDelta::RemoveSubsystem(new_sub.clone()));
+        for removed_sub in self.subsystems.difference(&other.subsystems) {
+            deltas.push(PortDelta::RemoveSubsystem(removed_sub.clone()));
         }
 
         // Updated Port Type.
@@ -221,6 +221,48 @@ mod tests {
         );
 
         base_state = new_state.clone();
+        deltas = base_state.get_deltas(&new_state);
+        assert_eq!(deltas.len(), 0);
+
+        new_state.ports.insert(
+            1,
+            Port::new(
+                PortType::Tcp("127.0.0.1:4420".parse().unwrap()),
+                BTreeSet::from_iter(vec!["nqn.subsystem".to_string()]),
+            ),
+        );
+        deltas = base_state.get_deltas(&new_state);
+        assert_eq!(deltas.len(), 1);
+        assert_eq!(
+            deltas[0],
+            StateDelta::UpdatePort(
+                1,
+                vec![PortDelta::AddSubsystem("nqn.subsystem".to_string())]
+            )
+        );
+
+        base_state = new_state.clone();
+        deltas = base_state.get_deltas(&new_state);
+        assert_eq!(deltas.len(), 0);
+
+        new_state.ports.insert(
+            1,
+            Port::new(
+                PortType::Tcp("127.0.0.1:4420".parse().unwrap()),
+                BTreeSet::new(),
+            ),
+        );
+        deltas = base_state.get_deltas(&new_state);
+        assert_eq!(deltas.len(), 1);
+        assert_eq!(
+            deltas[0],
+            StateDelta::UpdatePort(
+                1,
+                vec![PortDelta::RemoveSubsystem("nqn.subsystem".to_string())]
+            )
+        );
+
+        base_state = new_state.clone();
         new_state.ports.remove(&1);
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
@@ -238,12 +280,12 @@ mod tests {
 
         new_state
             .subsystems
-            .insert("testnqn".to_string(), Subsystem::default());
+            .insert("nqn.test".to_string(), Subsystem::default());
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
         assert_eq!(
             deltas[0],
-            StateDelta::AddSubsystem("testnqn".to_string(), Subsystem::default()),
+            StateDelta::AddSubsystem("nqn.test".to_string(), Subsystem::default()),
         );
 
         base_state = new_state.clone();
@@ -251,27 +293,42 @@ mod tests {
         assert_eq!(deltas.len(), 0);
 
         let mut testsub = Subsystem::default();
-        testsub.allowed_hosts.insert("initiatornqn".to_string());
+        testsub.allowed_hosts.insert("nqn.initiator".to_string());
         new_state
             .subsystems
-            .insert("testnqn".to_string(), testsub.clone());
+            .insert("nqn.test".to_string(), testsub.clone());
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
         assert_eq!(
             deltas[0],
             StateDelta::UpdateSubsystem(
-                "testnqn".to_string(),
-                vec![SubsystemDelta::AddHost("initiatornqn".to_string())]
+                "nqn.test".to_string(),
+                vec![SubsystemDelta::AddHost("nqn.initiator".to_string())]
             )
         );
 
         base_state = new_state.clone();
-        new_state.subsystems.remove("testnqn");
+        let testsub = Subsystem::default();
+        new_state
+            .subsystems
+            .insert("nqn.test".to_string(), testsub.clone());
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
         assert_eq!(
             deltas[0],
-            StateDelta::RemoveSubsystem("testnqn".to_string())
+            StateDelta::UpdateSubsystem(
+                "nqn.test".to_string(),
+                vec![SubsystemDelta::RemoveHost("nqn.initiator".to_string())]
+            )
+        );
+
+        base_state = new_state.clone();
+        new_state.subsystems.remove("nqn.test");
+        deltas = base_state.get_deltas(&new_state);
+        assert_eq!(deltas.len(), 1);
+        assert_eq!(
+            deltas[0],
+            StateDelta::RemoveSubsystem("nqn.test".to_string())
         );
     }
 
@@ -284,21 +341,21 @@ mod tests {
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 0);
 
-        new_state.allowed_hosts.insert("testnqn1".to_string());
+        new_state.allowed_hosts.insert("nqn.test1".to_string());
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
-        assert_eq!(deltas[0], SubsystemDelta::AddHost("testnqn1".to_string()));
+        assert_eq!(deltas[0], SubsystemDelta::AddHost("nqn.test1".to_string()));
 
         base_state = new_state.clone();
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 0);
 
-        new_state.allowed_hosts.remove("testnqn1");
+        new_state.allowed_hosts.remove("nqn.test1");
         deltas = base_state.get_deltas(&new_state);
         assert_eq!(deltas.len(), 1);
         assert_eq!(
             deltas[0],
-            SubsystemDelta::RemoveHost("testnqn1".to_string())
+            SubsystemDelta::RemoveHost("nqn.test1".to_string())
         );
 
         base_state = new_state.clone();

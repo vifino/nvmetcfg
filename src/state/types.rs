@@ -5,6 +5,7 @@
 
 use crate::errors::Error;
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     net::SocketAddr,
@@ -13,13 +14,13 @@ use std::{
 };
 use uuid::Uuid;
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
     pub subsystems: BTreeMap<String, Subsystem>,
     pub ports: BTreeMap<u16, Port>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Subsystem {
     pub model: Option<String>,
     pub serial: Option<String>,
@@ -27,7 +28,7 @@ pub struct Subsystem {
     pub namespaces: BTreeMap<u32, Namespace>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Namespace {
     pub enabled: bool,
     pub device_path: PathBuf,
@@ -35,8 +36,9 @@ pub struct Namespace {
     pub device_nguid: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Port {
+    #[serde(flatten)]
     pub port_type: PortType,
     pub subsystems: BTreeSet<String>,
 }
@@ -51,7 +53,8 @@ impl Port {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "port_type", content = "port_addr")]
 pub enum PortType {
     Loop,
     Tcp(SocketAddr),
@@ -59,7 +62,7 @@ pub enum PortType {
     FibreChannel(FibreChannelAddr),
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FibreChannelAddr {
     pub wwnn: u64,
     pub wwpn: u64,
