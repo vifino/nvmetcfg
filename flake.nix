@@ -11,19 +11,28 @@
     };
   };
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem
+    flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ]
       (system:
         let
           overlays = [ (import rust-overlay) ];
           pkgs = import nixpkgs {
             inherit system overlays;
           };
+          checkArgs = {
+            inherit self pkgs system;
+          };
         in
-        with pkgs;
         {
-          packages.default = pkgs.callPackage ./. {};
-          devShells.default = mkShell {
-            buildInputs = [ rust-bin.stable.latest.default cargo-bloat ];
+          packages = rec {
+            nvmetcfg = pkgs.callPackage ./. {};
+            default = nvmetcfg;
+          };
+          devShells.default = pkgs.mkShell {
+            buildInputs = with pkgs; [ rust-bin.stable.latest.default cargo-bloat ];
+          };
+
+          checks = {
+            loop = import ./tests/loop.nix checkArgs;
           };
         }
       );
