@@ -1,5 +1,6 @@
 mod namespace;
 mod port;
+mod state;
 mod subsystem;
 
 use anyhow::Result;
@@ -31,6 +32,11 @@ enum CliCommands {
         #[command(subcommand)]
         namespace_command: namespace::CliNamespaceCommands,
     },
+    /// NVMe-oF Target Subsystem State Management Commands
+    State {
+        #[command(subcommand)]
+        state_command: state::CliStateCommands,
+    },
 }
 
 fn main() -> Result<()> {
@@ -44,5 +50,6 @@ fn main() -> Result<()> {
         CliCommands::Namespace { namespace_command } => {
             namespace::CliNamespaceCommands::parse(namespace_command)
         }
+        CliCommands::State { state_command } => state::CliStateCommands::parse(state_command),
     }
 }
