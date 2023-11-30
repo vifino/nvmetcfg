@@ -12,8 +12,12 @@ jobs:
     strategy:
       matrix:
         system: [x86_64-linux, i686-linux]
-        check: [loop, tcp]
-    name: ${{ matrix.check }} - ${{ matrix.system }}
+        check: [loop, tcp, rdma]
+        exclude:
+          # Failed to find module 'rdma_rxe'
+          - system: i686-linux
+            check: rdma
+    name: ${{ matrix.system }} - ${{ matrix.check }}
     steps:
     - uses: actions/checkout@v3
     - name: Install Nix

@@ -34,6 +34,7 @@
           checks = {
             loop = import ./tests/loop.nix checkArgs;
             tcp = import ./tests/tcp.nix checkArgs;
+            rdma = import ./tests/rdma.nix checkArgs;
           };
         }
       );
