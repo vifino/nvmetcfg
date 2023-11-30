@@ -24,8 +24,17 @@ pub enum CliPortCommands {
         /// Type of Port.
         port_type: CliPortType,
 
-        // Port Address to use.
+        /// Port Address to use.
+        ///
+        /// For Tcp and Rdma port types, this should be an IP address and Port:
+        /// IPv4: 1.2.3.4:4420
+        /// IPv6: [::1]:4420
+        ///
+        /// For Fibre Channel transport, this should be the WWNN/WWPN in the following format:
+        /// Long:  nn-0x1000000044001123:pn-0x2000000055001123
+        /// Short: nn-1000000044001123:pn-2000000055001123
         #[arg(
+            verbatim_doc_comment,
             required_if_eq("port_type", "tcp"),
             required_if_eq("port_type", "rdma"),
             required_if_eq("port_type", "fc")
@@ -34,7 +43,7 @@ pub enum CliPortCommands {
     },
     /// Remove a Port.
     Remove {
-        // Port ID to remove.
+        /// Port ID to remove.
         pid: u16,
     },
     /// List the subsystems provided by a Port.

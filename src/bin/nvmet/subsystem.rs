@@ -24,10 +24,10 @@ pub enum CliSubsystemCommands {
         /// - nqn.2014-08.org.nvmexpress:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
         sub: String,
 
-        // Set the model.
+        /// Set the model.
         model: Option<String>,
 
-        // Set the serial.
+        /// Set the serial.
         serial: Option<String>,
     },
     /// Remove an existing Subsystem.
