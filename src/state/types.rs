@@ -98,10 +98,10 @@ impl FromStr for FibreChannelAddr {
             })
         } else if s.len() == 7 + 32 {
             Ok(Self {
-                wwnn: u64::from_str_radix(&s[3..20], 16)
-                    .with_context(|| Error::InvalidFCWWNN(s[3..20].to_string()))?,
-                wwpn: u64::from_str_radix(&s[21..28], 16)
-                    .with_context(|| Error::InvalidFCWWNN(s[21..28].to_string()))?,
+                wwnn: u64::from_str_radix(&s[3..19], 16)
+                    .with_context(|| Error::InvalidFCWWNN(s[3..19].to_string()))?,
+                wwpn: u64::from_str_radix(&s[23..39], 16)
+                    .with_context(|| Error::InvalidFCWWPN(s[23..39].to_string()))?,
             })
         } else {
             Err(Error::InvalidFCAddr(s.to_string()).into())
@@ -114,10 +114,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_fcaddr() {
-        let traddr = "nn-0x1000000044001123:pn-0x2000000055001123";
+    fn test_fcaddr_valid() {
         let addr = FibreChannelAddr::new(0x1000_0000_4400_1123, 0x2000_0000_5500_1123);
-        assert_eq!(traddr.parse::<FibreChannelAddr>().unwrap(), addr);
-        assert_eq!(addr.to_traddr(), traddr);
+        let traddr_long = "nn-0x1000000044001123:pn-0x2000000055001123";
+        let traddr_short = "nn-1000000044001123:pn-2000000055001123";
+        assert_eq!(traddr_long.parse::<FibreChannelAddr>().unwrap(), addr);
+        assert_eq!(traddr_short.parse::<FibreChannelAddr>().unwrap(), addr);
+
+        // The kernel returns it long, so we do as well.
+        assert_eq!(addr.to_traddr(), traddr_long);
+    }
+
+    #[test]
+    fn test_fcaddr_invalid() {
+        let traddr_too_short = "nn-10000000440011:pn-20000000550011";
+        assert!(traddr_too_short.parse::<FibreChannelAddr>().is_err());
+        let traddr_invalid_hex = "nn-10MEH00044001123:pn-2000000055001123";
+        assert!(traddr_invalid_hex.parse::<FibreChannelAddr>().is_err());
     }
 }
