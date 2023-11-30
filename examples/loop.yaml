@@ -1,0 +1,16 @@
+subsystems:
+  nqn.2023-11.sh.tty:example-test-loop:
+    model: Linux
+    serial: e6dd0f7cc6c83cb1e065
+    allowed_hosts: []
+    namespaces:
+      1:
+        enabled: true
+        device_path: /dev/loop0
+        device_uuid: 75db752f-9c96-4e3b-ae08-e0feebe08138
+        device_nguid: 00000000-0000-0000-0000-000000000000
+ports:
+  1:
+    port_type: Loop
+    subsystems:
+    - nqn.2023-11.sh.tty:example-test-loop
