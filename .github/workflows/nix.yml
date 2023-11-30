@@ -7,15 +7,18 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
+  integration:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        system: [x86_64-linux, i686-linux]
+        check: [loop, tcp]
+    name: ${{ matrix.check }} - ${{ matrix.system }}
     steps:
     - uses: actions/checkout@v3
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@main
-      with:
-        extra-conf: "system-features = nixos-test benchmark big-parallel kvm"
     - name: Setup Magic Nix cache
       uses: DeterminateSystems/magic-nix-cache-action@main
-    - name: Run Flake Checks
-      run: nix flake check -L
+    - name: Run Flake Check
+      run: nix build -L .#checks.${{ matrix.system }}.${{ matrix.check }}
