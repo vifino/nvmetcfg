@@ -1,8 +1,6 @@
 // Define the high level datastructures.
 // This is *purely* for representing the state.
 
-// TODO: serde to store the representation
-
 use crate::errors::Error;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};

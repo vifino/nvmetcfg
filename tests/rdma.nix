@@ -1,23 +1,33 @@
 (import ./lib.nix) {
   name = "nvmetcfg-test-rdma";
   nodes = {
-    target = { self, pkgs, system, ... }: {
-      environment.systemPackages = [ self.packages.${system}.default ];
-      boot.kernelModules = [ "nvmet" "nvmet_rdma" "rdma_rxe" ];
+    target = {
+      self,
+      pkgs,
+      system,
+      ...
+    }: {
+      environment.systemPackages = [self.packages.${system}.default];
+      boot.kernelModules = ["nvmet" "nvmet_rdma" "rdma_rxe"];
       virtualisation.diskSize = 4096;
       networking.rxe.enable = true;
-      networking.rxe.interfaces = [ "eth1" ];
-      networking.firewall.allowedUDPPorts = [ 4791 ];
+      networking.rxe.interfaces = ["eth1"];
+      networking.firewall.allowedUDPPorts = [4791];
     };
-    initiator = { self, pkgs, system, ... }: {
-      environment.systemPackages = [ pkgs.nvme-cli ];
-      boot.kernelModules = [ "nvme_rdma" "rdma_rxe" ];
+    initiator = {
+      self,
+      pkgs,
+      system,
+      ...
+    }: {
+      environment.systemPackages = [pkgs.nvme-cli];
+      boot.kernelModules = ["nvme_rdma" "rdma_rxe"];
       networking.rxe.enable = true;
-      networking.rxe.interfaces = [ "eth1" ];
-      networking.firewall.allowedUDPPorts = [ 4791 ];
+      networking.rxe.interfaces = ["eth1"];
+      networking.firewall.allowedUDPPorts = [4791];
     };
   };
-  testScript = let 
+  testScript = let
     subnqn = "nqn.2023-11.sh.tty:nvmetcfg-test-loop";
   in ''
     start_all()
@@ -51,7 +61,7 @@
     target.succeed("nvmet port add-subsystem 1 ${subnqn}")
     assert "${subnqn}" in target.succeed("nvmet port list-subsystems 1")
     target.succeed("test -h /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
- 
+
     # State save/restore test.
     target.succeed("nvmet state save /root/state.yml")
     target.succeed("test -f /root/state.yml")

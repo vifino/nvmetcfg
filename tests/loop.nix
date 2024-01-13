@@ -1,11 +1,16 @@
 (import ./lib.nix) {
   name = "nvmetcfg-test-loop";
-  nodes.node = { self, pkgs, system, ... }: {
-    environment.systemPackages = [ self.packages.${system}.default pkgs.nvme-cli ];
-    boot.kernelModules = [ "nvmet" ];
+  nodes.node = {
+    self,
+    pkgs,
+    system,
+    ...
+  }: {
+    environment.systemPackages = [self.packages.${system}.default pkgs.nvme-cli];
+    boot.kernelModules = ["nvmet"];
     virtualisation.diskSize = 4096;
   };
-  testScript = let 
+  testScript = let
     subnqn = "nqn.2023-11.sh.tty:nvmetcfg-test-loop";
   in ''
     start_all()
@@ -34,7 +39,7 @@
     node.succeed("nvmet port add-subsystem 1 ${subnqn}")
     assert "${subnqn}" in node.succeed("nvmet port list-subsystems 1")
     node.succeed("test -h /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
- 
+
     assert "${subnqn}" in machine.succeed("nvme discover -t loop")
 
     # State save/restore test.
