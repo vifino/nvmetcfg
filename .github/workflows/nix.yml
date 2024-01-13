@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        system: [x86_64-linux, i686-linux]
+        system: [x86_64-linux, i686-linux, aarch64-linux]
         check: [loop, tcp, rdma]
         exclude:
           # Failed to find module 'rdma_rxe'
@@ -20,8 +20,13 @@ jobs:
     name: ${{ matrix.system }} - ${{ matrix.check }}
     steps:
     - uses: actions/checkout@v3
+    - name: Setup QEMU User and binfmt
+      uses: docker/setup-qemu-action@v3
+      if: ${{ matrix.system != 'x86_64-linux' && matrix.system != 'i686-linux' }}
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@main
+      with:
+        extra-conf: "extra-platforms = ${{ matrix.system }}"
     - name: Setup Magic Nix cache
       uses: DeterminateSystems/magic-nix-cache-action@main
     - name: Run Flake Check
