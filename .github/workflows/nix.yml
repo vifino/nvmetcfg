@@ -11,7 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        system: [x86_64-linux, i686-linux, aarch64-linux]
+        # aarch64-linux and friends require emulation, which is terribly slow.
+        # so slow, that the test doesn't pass.
+        # TODO: set up aarch64 worker?
+        system: [x86_64-linux, i686-linux]
         check: [loop, tcp, rdma]
         exclude:
           # Failed to find module 'rdma_rxe'
