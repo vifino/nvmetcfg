@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Subcommand;
-use nvmetcfg::{kernel::KernelConfig, state::State};
+use nvmetcfg::{errors::Error, kernel::KernelConfig, state::State};
+use serde::{Deserialize, Serialize};
 use std::{fs::File, path::PathBuf};
 
 #[derive(Subcommand)]
@@ -19,6 +20,15 @@ pub enum CliStateCommands {
     Clear,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConfigFile {
+    // TODO: Make this proper?
+    #[serde(default)]
+    pub version: u32,
+    #[serde(flatten)]
+    pub state: State,
+}
+
 impl CliStateCommands {
     pub(super) fn parse(command: Self) -> Result<()> {
         match command {
@@ -26,15 +36,20 @@ impl CliStateCommands {
                 let f = File::create(file).context("Failed to open state file for writing")?;
                 let state =
                     KernelConfig::gather_state().context("Failed to gather state for writing")?;
-                serde_yaml::to_writer(f, &state)
+                let config = ConfigFile { version: 0, state };
+                serde_yaml::to_writer(f, &config)
                     .context("Failed to write current state to file")?;
                 println!("Sucessfully written current state to file.");
                 Ok(())
             }
             CliStateCommands::Restore { file } => {
                 let f = File::open(file).context("Failed to open state file for reading")?;
-                let desired: State =
+                let config: ConfigFile =
                     serde_yaml::from_reader(f).context("Failed to read from state file")?;
+                if config.version != 0 {
+                    return Err(Error::UnsupportedConfigVersion(config.version).into());
+                }
+                let desired = config.state;
                 let current =
                     KernelConfig::gather_state().context("Failed to gather state for writing")?;
                 let delta = current.get_deltas(&desired);

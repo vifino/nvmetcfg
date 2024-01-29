@@ -1,3 +1,4 @@
+version: 0
 subsystems:
   nqn.2023-11.sh.tty:example-test-loop:
     model: Linux

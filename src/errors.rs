@@ -58,4 +58,6 @@ pub enum Error {
     ExistingNamespace(u32, String),
     #[error("Invalid UUID")]
     InvalidUuid(#[from] uuid::Error),
+    #[error("Unsupported config version: {0}")]
+    UnsupportedConfigVersion(u32),
 }
