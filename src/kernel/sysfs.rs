@@ -1,7 +1,7 @@
 use crate::errors::{Error, Result};
 use crate::helpers::{
     assert_valid_model, assert_valid_nqn, assert_valid_nsid, assert_valid_serial,
-    assert_valid_subsys_name, get_btreemap_differences, read_str, write_str,
+    get_btreemap_differences, read_str, write_str,
 };
 use crate::state::{Namespace, PortType};
 use anyhow::Context;
@@ -115,7 +115,7 @@ impl NvmetRoot {
         Ok(path.try_exists()?)
     }
     pub(super) fn open_subsystem(nqn: &str) -> Result<NvmetSubsystem> {
-        assert_valid_subsys_name(nqn)?;
+        assert_valid_nqn(nqn)?;
         let path = Path::new(NVMET_ROOT).join("subsystems").join(nqn);
         Ok(NvmetSubsystem {
             nqn: nqn.to_string(),

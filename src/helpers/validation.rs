@@ -21,19 +21,12 @@ pub fn assert_valid_nqn(nqn: &str) -> Result<()> {
     }
 }
 
-pub fn assert_valid_subsys_name(nqn: &str) -> Result<()> {
-    assert_valid_nqn(nqn)?;
-    if nqn == "nqn.2014-08.org.nvmexpress.discovery" {
-        Err(Error::CantCreateDiscovery.into())
-    } else {
-        Ok(())
-    }
-}
-
 pub fn assert_compliant_nqn(nqn: &str) -> Result<()> {
     assert_valid_nqn(nqn)?;
     if !nqn.starts_with("nqn.") {
         Err(Error::NQNMissingNQN(nqn.to_string()).into())
+    } else if nqn.len() < 15 {
+        Err(Error::NQNTooShort(nqn.to_string()).into())
     } else if let Some(uuid) = nqn.strip_prefix("nqn.2014-08.org.nvmexpress:uuid:") {
         // NQN is a UUID. So we should ensure it's valid.
         if Uuid::try_parse(uuid).is_err() {
@@ -41,10 +34,28 @@ pub fn assert_compliant_nqn(nqn: &str) -> Result<()> {
         } else {
             Ok(())
         }
+    } else if nqn == "nqn.2014-08.org.nvmexpress.discovery" {
+        Err(Error::CantCreateDiscovery.into())
     } else {
         // TODO: check if nqn has nqn.yyyy-mm, some reverse domain and a colon.
         // we can't make many other assumptions.
-        Ok(())
+        let nqn_bytes = nqn.as_bytes();
+        let has_dots_and_dash =
+            (nqn_bytes[3] == b'.') && (nqn_bytes[8] == b'-') && (nqn_bytes[11] == b'.');
+        let valid_date = nqn[4..8].parse::<i16>().is_ok() && nqn[9..10].parse::<i16>().is_ok();
+        if !has_dots_and_dash || !valid_date {
+            Err(Error::NQNInvalidDate(nqn.to_string()).into())
+        } else {
+            if let Some((domain, identifier)) = nqn[12..].split_once(":") {
+                if domain == "org.nvmexpress" {
+                    return Err(Error::NQNInvalidDomain(nqn.to_string()).into());
+                }
+                if !domain.is_empty() && !identifier.is_empty() {
+                    return Ok(());
+                }
+            }
+            Err(Error::NQNInvalidIdentifier(nqn.to_string()).into())
+        }
     }
 }
 
@@ -85,13 +96,30 @@ mod tests {
         // Too long.
         assert!(assert_valid_nqn("nqn.2023-11.sh.tty.foodreviews:Lopado\u{AD}temacho\u{AD}selacho\u{AD}galeo\u{AD}kranio\u{AD}leipsano\u{AD}drim\u{AD}hypo\u{AD}trimmato\u{AD}silphio\u{AD}karabo\u{AD}melito\u{AD}katakechy\u{AD}meno\u{AD}kichl\u{AD}epi\u{AD}kossypho\u{AD}phatto\u{AD}perister\u{AD}alektryon\u{AD}opte\u{AD}kephallio\u{AD}kigklo\u{AD}peleio\u{AD}lagoio\u{AD}siraio\u{AD}baphe\u{AD}tragano\u{AD}pterygon").is_err());
 
-        assert_valid_subsys_name(valid_nqn)?;
-        // Can't use discovery NQN.
-        assert!(assert_valid_subsys_name("nqn.2014-08.org.nvmexpress.discovery").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_compliant_nqn() -> Result<()> {
+        let valid_nqn = "nqn.2023-11.sh.tty:unit-tests";
 
         assert_compliant_nqn(valid_nqn)?;
         // Doesn't start with nqn.
         assert!(assert_compliant_nqn("blergh").is_err());
+        // Incorrect date formatting.
+        assert!(assert_compliant_nqn("nqn.23_11.sh.tty:unit-tests").is_err());
+        // Incorrect date digits.
+        assert!(assert_compliant_nqn("nqn.abcd-ef.sh.tty:unit-tests").is_err());
+        // No domain/identifier.
+        assert!(assert_compliant_nqn("nqn.2023-11.a").is_err());
+        // No domain/identifier.
+        assert!(assert_compliant_nqn("nqn.2023-11.a:").is_err());
+        // No domain/identifier.
+        assert!(assert_compliant_nqn("nqn.2023-11.:b").is_err());
+
+        // org.nvmexpress
+        assert!(assert_compliant_nqn("nqn.2023-11.org.nvmexpress:blah").is_err());
+
         // UUID prefix is not UUID.
         assert!(assert_compliant_nqn("nqn.2014-08.org.nvmexpress:uuid:42").is_err());
         // UUID prefix is valid UUID.

@@ -10,12 +10,20 @@ pub enum Error {
     NoNvmetSysfs,
     #[error("NVMe Qualified Name is not ASCII-only: {0}")]
     NQNNotAscii(String),
+    #[error("NVMe Qualified Name is shorter than 13 bytes: {0}")]
+    NQNTooShort(String),
     #[error("NVMe Qualified Name is longer than 223 bytes: {0}")]
     NQNTooLong(String),
     #[error("NVMe Qualified Name does not start with 'nqn.': {0}")]
     NQNMissingNQN(String),
     #[error("NVMe Qualified Name in UUID-Format does not have valid UUID: {0}")]
     NQNUuidInvalid(String),
+    #[error("NVMe Qualified Name has an invalid date: {0}")]
+    NQNInvalidDate(String),
+    #[error("NVMe Qualified Name should not use org.nvmexpress unless it is a UUID: {0}")]
+    NQNInvalidDomain(String),
+    #[error("NVMe Qualified Name has invalid reverse domain or identifier: {0}")]
+    NQNInvalidIdentifier(String),
     #[error("Unsupported addr_trtype: {0}")]
     UnsupportedTrType(String),
     #[error("Failed to parse IP address")]
