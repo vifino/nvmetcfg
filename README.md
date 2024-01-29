@@ -45,6 +45,7 @@ This is a simple example showing:
 - Setup of `/dev/loop0` to point to `/tmp/test.img`
 - Creation of a simple single-namespace subsystem `nqn.2023-11.sh.tty:example-test-loop` which is backed by `/dev/loop0`.
 - Creation of a NVMe over TCP port which binds to all IPv4 addresses on port `4420`, the standard port.
+- Saving the current nvmet subsystem state, clearing it and restoring it.
 
 ```console
 # whoami
@@ -75,10 +76,23 @@ Port 1:
 	Type: Tcp(0.0.0.0:4420)
 	Subsystems: 1
 		nqn.2023-11.sh.tty:example-test-loop
+
+# mkdir -p /etc/nvmetcfg
+# nvmet state save /etc/nvmetcfg/state.yaml
+Sucessfully written current state to file.
+# nvmet state clear
+Sucessfully cleared configuration: 2 state changes.
+# nvmet state restore /etc/nvmetcfg/state.yaml
+Sucessfully applied saved state: 2 state changes.
+# nvmet state restore /etc/nvmetcfg/state.yaml
+No changes made: System state has no changes compared to saved state.
 ```
 
 Obviously, the `show` commands are not necessary for functionality, only for visual verification.
 If any of the commands fail, error messages will be printed.
+
+For an example of the config file, check out [examples/tcp.yaml](examples/tcp.yaml).
+It should match what you'd get if running this, other than the random serial number.
 
 ## Installation
 ### NixOS
