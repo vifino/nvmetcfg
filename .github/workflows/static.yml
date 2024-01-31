@@ -11,23 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        system: [x86_64-linux, i686-linux, aarch64-linux]
+        system: [x86_64, i686, aarch64]
     name: ${{ matrix.system }}
     steps:
     - uses: actions/checkout@v3
     - name: Setup QEMU User and binfmt
       uses: docker/setup-qemu-action@v3
-      if: ${{ matrix.system != 'x86_64-linux' && matrix.system != 'i686-linux' }}
+      if: ${{ matrix.system != 'x86_64' && matrix.system != 'i686' }}
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@main
       with:
-        extra-conf: "extra-platforms = ${{ matrix.system }}"
+        extra-conf: "extra-platforms = ${{ matrix.system }}-linux"
     - name: Setup Magic Nix cache
       uses: DeterminateSystems/magic-nix-cache-action@main
     - name: Build static binary
       run: |
-        nix build -L .#packages.${{ matrix.system }}.nvmetcfg-static
-        echo "nvmetBinary=$(nix eval --raw .#packages.${{ matrix.system }}.nvmetcfg-static)/bin/nvmet" >> $GITHUB_ENV
+        FLAKEREF=.#packages.${{ matrix.system }}-linux.nvmetcfg-static
+        nix build -L $FLAKEREF
+        echo "nvmetBinary=$(nix eval --raw $FLAKEREF)/bin/nvmet" >> $GITHUB_ENV
     - name: Upload workflow artifacts
       uses: actions/upload-artifact@v4
       with:
