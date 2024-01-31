@@ -29,6 +29,7 @@
       in {
         packages = rec {
           nvmetcfg = pkgs.callPackage ./. {};
+          nvmetcfg-static = pkgs.pkgsStatic.callPackage ./. {};
           default = nvmetcfg;
         };
         devShells.default = pkgs.mkShell {

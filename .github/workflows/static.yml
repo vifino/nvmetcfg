@@ -1,0 +1,35 @@
+name: Static
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        system: [x86_64-linux, i686-linux, aarch64-linux]
+    name: ${{ matrix.system }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup QEMU User and binfmt
+      uses: docker/setup-qemu-action@v3
+      if: ${{ matrix.system != 'x86_64-linux' && matrix.system != 'i686-linux' }}
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+      with:
+        extra-conf: "extra-platforms = ${{ matrix.system }}"
+    - name: Setup Magic Nix cache
+      uses: DeterminateSystems/magic-nix-cache-action@main
+    - name: Build static binary
+      run: |
+        nix build -L .#packages.${{ matrix.system }}.nvmetcfg-static
+        echo "nvmetBinary=$(nix eval --raw .#packages.${{ matrix.system }}.nvmetcfg-static)/bin/nvmet" >> $GITHUB_ENV
+    - name: Upload workflow artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nvmet-${{ matrix.system }}
+        path: ${{ env.nvmetBinary }}

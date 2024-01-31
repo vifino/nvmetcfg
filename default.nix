@@ -1,9 +1,9 @@
 {
   lib,
-  pkgs,
+  rustPlatform,
   ...
 }:
-pkgs.rustPlatform.buildRustPackage {
+rustPlatform.buildRustPackage {
   pname = "nvmetcfg";
   version = "0.1.0";
   src = ./.;
