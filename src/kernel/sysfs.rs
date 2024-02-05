@@ -504,7 +504,15 @@ impl NvmetNamespace {
     pub(super) fn set_device_path(&self, dev: &PathBuf) -> Result<()> {
         let path = Path::new(dev);
         // TODO: is it possible to mount a file instead? there is a mysterious "buffered_io" file..
-        let metadata = std::fs::metadata(path)?.file_type();
+        let metadata = std::fs::metadata(path)
+            .with_context(|| {
+                format!(
+                    "Failed to get metadata for device {} in namespace {}",
+                    dev.display(),
+                    self.nsid
+                )
+            })?
+            .file_type();
         if !metadata.is_block_device() {
             return Err(Error::InvalidDevice(dev.display().to_string()).into());
         }
@@ -561,7 +569,12 @@ impl NvmetNamespace {
     }
     pub(super) fn set_namespace(&self, ns: &Namespace) -> Result<()> {
         // Always need to disable before applying changes.
-        self.set_enabled(false)?;
+        self.set_enabled(false).with_context(|| {
+            format!(
+                "Failed to disable namespace {} before applying changes",
+                self.nsid
+            )
+        })?;
 
         self.set_device_path(&ns.device_path)?;
         if let Some(uuid) = ns.device_uuid {
@@ -571,7 +584,12 @@ impl NvmetNamespace {
             self.set_device_nguid(&nguid)?;
         }
 
-        self.set_enabled(ns.enabled)?;
+        self.set_enabled(ns.enabled).with_context(|| {
+            format!(
+                "Failed to enable namespace {} after applying changes",
+                self.nsid
+            )
+        })?;
 
         Ok(())
     }
