@@ -33,7 +33,13 @@
           default = nvmetcfg;
         };
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [rust-bin.stable.latest.default cargo-bloat];
+          buildInputs = with pkgs; [
+            (rust-bin.stable.latest.default.override {
+              extensions = [ "llvm-tools-preview" ];
+            })
+            cargo-bloat
+            cargo-llvm-cov
+          ];
         };
 
         checks = {
