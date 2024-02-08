@@ -10,6 +10,7 @@ use clap::{Parser, Subcommand};
 #[command(name = "nvmet")]
 #[command(author = "Adrian 'vifino' Pistol <vifino@posteo.net>")]
 #[command(about = "NVMe-oF Target Configuration CLI", long_about = None)]
+#[clap(version)]
 struct Cli {
     #[command(subcommand)]
     command: CliCommands,
