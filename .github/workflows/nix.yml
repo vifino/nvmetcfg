@@ -22,7 +22,7 @@ jobs:
             check: rdma
     name: ${{ matrix.system }} - ${{ matrix.check }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup QEMU User and binfmt
       uses: docker/setup-qemu-action@v3
       if: ${{ matrix.system != 'x86_64' && matrix.system != 'i686' }}
