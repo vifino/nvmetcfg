@@ -7,12 +7,16 @@
       system,
       ...
     }: {
-      environment.systemPackages = [self.packages.${system}.default];
+      environment.systemPackages = with pkgs; [
+        self.packages.${system}.nvmetcfg-coverage
+        llvmPackages_latest.bintools
+      ];
       boot.kernelModules = ["nvmet" "nvmet_rdma" "rdma_rxe"];
       virtualisation.diskSize = 4096;
       networking.rxe.enable = true;
       networking.rxe.interfaces = ["eth1"];
       networking.firewall.allowedUDPPorts = [4791];
+      environment.variables.LLVM_PROFILE_FILE = "/tmp/nvmetcfg-%p-%8m.profraw";
     };
     initiator = {
       self,
@@ -88,5 +92,12 @@
 
     target.succeed("nvmet port remove 1")
     target.fail("test -e /sys/kernel/config/nvmet/ports/1")
+
+    # Export coverage.
+    target.succeed("llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw")
+    target.succeed("llvm-cov export -format=lcov -instr-profile=/tmp/nvmetcfg.profdata " +
+      "--ignore-filename-regex=/.cargo/registry --show-instantiation-summary " +
+      "-object $(which nvmet) > /tmp/nvmet.lcov")
+    target.copy_from_vm("/tmp/nvmet.lcov")
   '';
 }

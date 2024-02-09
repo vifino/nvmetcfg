@@ -6,9 +6,13 @@
     system,
     ...
   }: {
-    environment.systemPackages = [self.packages.${system}.default pkgs.nvme-cli];
+    environment.systemPackages = with pkgs; [
+      self.packages.${system}.nvmetcfg-coverage nvme-cli
+      llvmPackages_latest.bintools
+    ];
     boot.kernelModules = ["nvmet"];
     virtualisation.diskSize = 4096;
+    environment.variables.LLVM_PROFILE_FILE = "/tmp/nvmetcfg-%p-%8m.profraw";
   };
   testScript = let
     subnqn = "nqn.2023-11.sh.tty:nvmetcfg-test-loop";
@@ -64,5 +68,12 @@
 
     node.succeed("nvmet port remove 1")
     node.fail("test -e /sys/kernel/config/nvmet/ports/1")
+
+    # Export coverage.
+    node.succeed("llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw")
+    node.succeed("llvm-cov export -format=lcov -instr-profile=/tmp/nvmetcfg.profdata " +
+      "--ignore-filename-regex=/.cargo/registry --show-instantiation-summary " +
+      "-object $(which nvmet) > /tmp/nvmet.lcov")
+    node.copy_from_vm("/tmp/nvmet.lcov")
   '';
 }

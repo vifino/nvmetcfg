@@ -34,3 +34,12 @@ jobs:
       uses: DeterminateSystems/magic-nix-cache-action@main
     - name: Run Flake Check
       run: nix build -L .#checks.${{ matrix.system }}-linux.${{ matrix.check }}
+    - name: Copy coverage to current directory
+      run: cp $(nix eval --raw .#checks.${{ matrix.system }}-linux.${{ matrix.check }})/nvmet.lcov .
+    - name: Upload to codecov.io
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
+        file: nvmet.lcov
+        name: ${{ matrix.system }}-${{ matrix.check }}

@@ -30,6 +30,7 @@
         packages = rec {
           nvmetcfg = pkgs.callPackage ./. {};
           nvmetcfg-static = pkgs.pkgsStatic.callPackage ./. {};
+          nvmetcfg-coverage = (nvmetcfg.overrideAttrs (o: { RUSTFLAGS = "-C instrument-coverage"; dontStrip = true; }));
           default = nvmetcfg;
         };
         devShells.default = pkgs.mkShell {
