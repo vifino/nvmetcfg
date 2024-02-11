@@ -40,6 +40,7 @@
             })
             cargo-bloat
             cargo-llvm-cov
+            llvmPackages_latest.bintools
           ];
         };
 

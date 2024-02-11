@@ -35,7 +35,7 @@ jobs:
         llvm-cov --version
         llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw
         llvm-cov export -format=lcov -instr-profile=/tmp/nvmetcfg.profdata \
-          --ignore-filename-regex='/.cargo/registry' \
+          --ignore-filename-regex=/.cargo/registry --ignore-filename-regex=src/lib.rs --ignore-filename-regex=src/state/mod.rs \
           --show-instantiation-summary \
           $(cargo test --tests --no-run --message-format=json | jq -r "select(.profile.test == true) | .filenames[]" | xargs -I {} printf "-object {} ") > nvmetcfg.lcov
     - name: Upload to codecov.io

@@ -123,8 +123,8 @@
     # Export coverage.
     target.succeed("llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw")
     target.succeed("llvm-cov export -format=lcov -instr-profile=/tmp/nvmetcfg.profdata " +
-      "--ignore-filename-regex=/.cargo/registry --show-instantiation-summary " +
-      "-object $(which nvmet) > /tmp/nvmet.lcov")
+      "--ignore-filename-regex=/.cargo/registry --ignore-filename-regex=src/lib.rs --ignore-filename-regex=src/state/mod.rs " +
+      "--show-instantiation-summary -object $(which nvmet) > /tmp/nvmet.lcov")
     target.copy_from_vm("/tmp/nvmet.lcov")
   '';
 }
