@@ -24,14 +24,17 @@ impl NvmetRoot {
         }
     }
 
-    pub(super) fn list_hosts() -> Result<BTreeSet<String>> {
-        let path = Path::new(NVMET_ROOT).join("hosts");
-        let paths = std::fs::read_dir(path).context("Failed to list hosts")?;
-
+    pub(super) fn list_used_hosts() -> Result<BTreeSet<String>> {
         let mut hosts = BTreeSet::new();
-        for wpath in paths {
-            let path = wpath?;
-            hosts.insert(path.file_name().to_str().unwrap().to_owned());
+        let subsystems = Self::list_subsystems()
+            .with_context(|| format!("Failed listing subsystems to list used hosts"))?;
+        for sub in subsystems {
+            hosts.append(&mut sub.list_hosts().with_context(|| {
+                format!(
+                    "Failed listing allowed hosts for subsystem {} to list used hosts",
+                    sub.nqn
+                )
+            })?);
         }
         Ok(hosts)
     }

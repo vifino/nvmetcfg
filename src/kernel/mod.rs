@@ -154,14 +154,34 @@ impl KernelConfig {
                                 })?
                             }
                             SubsystemDelta::AddHost(host) => {
+                                nvmetsub.set_allow_any(false).with_context(|| {
+                                    format!("Failed to unset attr_allow_any_host before adding allowed host to subsystem {nqn}")
+                                })?;
                                 nvmetsub.enable_host(&host).with_context(|| {
                                     format!("Failed to add allowed host to subsystem {nqn}")
                                 })?
                             }
                             SubsystemDelta::RemoveHost(host) => {
                                 nvmetsub.disable_host(&host).with_context(|| {
-                                    format!("Failed to remove allowed host from subsystem {nqn}")
-                                })?
+                                    format!(
+                                        "Failed to remove allowed host {host} from subsystem {nqn}"
+                                    )
+                                })?;
+
+                                let hosts = nvmetsub.list_hosts().with_context(|| format!("Failed to list allowed hosts for subsystem {nqn} after removing host {host} from subsystem {nqn}"))?;
+                                if hosts.is_empty() {
+                                    nvmetsub.set_allow_any(true).with_context(|| format!("Failed to set attr_allow_any_host after removing host {host} from subsystem {nqn}"))?;
+                                }
+
+                                let used_hosts = NvmetRoot::list_used_hosts()
+                                    .with_context(|| format!("Failed to list all allowed hosts before removing host {host} from subsystem {nqn}"))?;
+                                if !used_hosts.contains(&host) {
+                                    NvmetRoot::remove_host(&host).with_context(|| {
+                                        format!(
+                        "Failed to remove unused hosts after deletion of subsystem {nqn}"
+                                            )
+                                    })?;
+                                }
                             }
                             SubsystemDelta::AddNamespace(nsid, ns) => {
                                 let nvmetns =
@@ -196,9 +216,7 @@ impl KernelConfig {
                         .with_context(|| format!("Failed to remove existing subsystem {nqn}"));
                     }
 
-                    // Fetch global hosts just before we remove the subsystem.
-                    let prev_hosts = NvmetRoot::list_hosts()
-                        .with_context(|| format!("Failed to list all allowed hosts before removing existing subsystem {nqn}"))?;
+                    // Fetch our hosts just before we remove the subsystem.
                     let our_hosts = NvmetRoot::open_subsystem(&nqn)?
                         .list_hosts()
                         .with_context(|| format!("Failed to list subsystem hosts before removing existing subsystem {nqn}"))?;
@@ -220,15 +238,13 @@ impl KernelConfig {
                         .with_context(|| format!("Failed to remove subsystem {nqn}"))?;
 
                     // Iterate over all remaining subsystems and find what host we're missing now.
-                    let current_hosts = NvmetRoot::list_hosts().with_context(|| format!("Failed to list all allowed hosts before removing existing subsystem {nqn}"))?;
-                    for unused_host in prev_hosts.difference(&current_hosts) {
-                        if our_hosts.contains(unused_host) {
-                            NvmetRoot::remove_host(unused_host).with_context(|| {
-                                format!(
-                                    "Failed to remove unused hosts after deletion of subsystem {nqn}"
-                                )
-                            })?;
-                        }
+                    let current_hosts = NvmetRoot::list_used_hosts().with_context(|| format!("Failed to list used allowed hosts before removing existing subsystem {nqn}"))?;
+                    for unused_host in our_hosts.difference(&current_hosts) {
+                        NvmetRoot::remove_host(unused_host).with_context(|| {
+                            format!(
+                                "Failed to remove unused hosts after deletion of subsystem {nqn}"
+                            )
+                        })?;
                     }
                 }
             }
