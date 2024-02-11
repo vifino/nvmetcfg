@@ -28,11 +28,13 @@
     node.succeed("nvmet subsystem add ${subnqn}")
     assert "${subnqn}" in node.succeed("nvmet subsystem list")
     node.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}")
+    node.succeed("nvmet subsystem show")
 
     node.succeed("nvmet namespace add ${subnqn} 1 /dev/loop0")
     assert "1" in node.succeed("nvmet namespace list ${subnqn}")
     node.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     assert "/dev/loop0" in node.succeed("cat /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1/device_path")
+    node.succeed("nvmet namespace show ${subnqn}")
 
     # Create the loopback port.
     node.succeed("nvmet port add 1 loop")
@@ -43,6 +45,7 @@
     node.succeed("nvmet port add-subsystem 1 ${subnqn}")
     assert "${subnqn}" in node.succeed("nvmet port list-subsystems 1")
     node.succeed("test -h /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
+    node.succeed("nvmet port show")
 
     assert "${subnqn}" in machine.succeed("nvme discover -t loop")
 
@@ -63,11 +66,17 @@
     assert node.succeed("cat /root/state.yml") == node.succeed("cat /root/state-after.yml")
 
     # Cleanup.
+    node.succeed("nvmet namespace remove ${subnqn} 1")
+    node.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
+    node.fail("nvmet namespace remove ${subnqn} 1")
+
     node.succeed("nvmet subsystem remove ${subnqn}")
     node.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}")
+    node.fail("nvmet subsystem remove ${subnqn}")
 
     node.succeed("nvmet port remove 1")
     node.fail("test -e /sys/kernel/config/nvmet/ports/1")
+    node.fail("nvmet port remove 1")
 
     # Export coverage.
     node.succeed("llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw")

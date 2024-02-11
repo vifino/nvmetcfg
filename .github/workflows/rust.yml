@@ -12,9 +12,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     env:
       CARGO_INCREMENTAL: 0
-      RUSTFLAGS: -C instrument-coverage
+      RUSTFLAGS: -D warnings -C instrument-coverage
       LLVM_PROFILE_FILE: /tmp/nvmetcfg-%p-%8m.profraw
 
     steps:

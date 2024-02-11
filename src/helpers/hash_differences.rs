@@ -70,6 +70,22 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_get_btreeset_differences() {
+        let mut base = BTreeSet::new();
+        let mut new = BTreeSet::new();
+
+        base.insert("Apple");
+        new.insert("Apple");
+        base.insert("Banana");
+        new.insert("Carrot");
+
+        let delta = get_btreeset_differences(&base, &new);
+        assert!(delta.same.contains("Apple"));
+        assert!(delta.removed.contains("Banana"));
+        assert!(delta.added.contains("Carrot"));
+    }
+
+    #[test]
     fn test_get_btreemap_differences() {
         let mut base = BTreeMap::new();
         let mut new = BTreeMap::new();

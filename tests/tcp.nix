@@ -40,11 +40,13 @@
     target.succeed("nvmet subsystem add ${subnqn}")
     assert "${subnqn}" in target.succeed("nvmet subsystem list")
     target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}")
+    target.succeed("nvmet subsystem show")
 
     target.succeed("nvmet namespace add ${subnqn} 1 /dev/loop0")
     assert "1" in target.succeed("nvmet namespace list ${subnqn}")
     target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     assert "/dev/loop0" in target.succeed("cat /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1/device_path")
+    target.succeed("nvmet namespace show ${subnqn}")
 
     # Create the tcp port.
     target.succeed("nvmet port add 1 tcp 0.0.0.0:4420")
@@ -58,6 +60,7 @@
     target.succeed("nvmet port add-subsystem 1 ${subnqn}")
     assert "${subnqn}" in target.succeed("nvmet port list-subsystems 1")
     target.succeed("test -h /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
+    target.succeed("nvmet port show")
 
     # State save/restore test.
     target.succeed("nvmet state save /root/state.yml")
@@ -80,11 +83,17 @@
     assert "${subnqn}" in initiator.succeed("nvme discover -t tcp -a target -s 4420")
 
     # Cleanup.
+    target.succeed("nvmet namespace remove ${subnqn} 1")
+    target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
+    target.fail("nvmet namespace remove ${subnqn} 1")
+
     target.succeed("nvmet subsystem remove ${subnqn}")
     target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}")
+    target.fail("nvmet subsystem remove ${subnqn}")
 
     target.succeed("nvmet port remove 1")
     target.fail("test -e /sys/kernel/config/nvmet/ports/1")
+    target.fail("nvmet port remove 1")
 
     # Export coverage.
     target.succeed("llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw")

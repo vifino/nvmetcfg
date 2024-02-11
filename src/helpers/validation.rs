@@ -94,7 +94,7 @@ mod tests {
         // Not ASCII.
         assert!(assert_valid_nqn("nqn.2023-11.💩:invalid-nqn-unicode").is_err());
         // Too long.
-        assert!(assert_valid_nqn("nqn.2023-11.sh.tty.foodreviews:Lopado\u{AD}temacho\u{AD}selacho\u{AD}galeo\u{AD}kranio\u{AD}leipsano\u{AD}drim\u{AD}hypo\u{AD}trimmato\u{AD}silphio\u{AD}karabo\u{AD}melito\u{AD}katakechy\u{AD}meno\u{AD}kichl\u{AD}epi\u{AD}kossypho\u{AD}phatto\u{AD}perister\u{AD}alektryon\u{AD}opte\u{AD}kephallio\u{AD}kigklo\u{AD}peleio\u{AD}lagoio\u{AD}siraio\u{AD}baphe\u{AD}tragano\u{AD}pterygon").is_err());
+        assert!(assert_valid_nqn("nqn.2023-11.sh.tty.foodreviews:Lopado-temacho-selacho-galeo-kranio-leipsano-drim-hypo-trimmato-silphio-karabo-melito-katakechy-meno-kichl-epi-kossypho-phatto-perister-alektryon-opte-kephallio-kigklo-peleio-lagoio-siraio-baphe-tragano-pterygon").is_err());
 
         Ok(())
     }
@@ -113,9 +113,12 @@ mod tests {
         // No domain/identifier.
         assert!(assert_compliant_nqn("nqn.2023-11.a").is_err());
         // No domain/identifier.
-        assert!(assert_compliant_nqn("nqn.2023-11.a:").is_err());
+        assert!(assert_compliant_nqn("nqn.2023-11.apple:").is_err());
         // No domain/identifier.
-        assert!(assert_compliant_nqn("nqn.2023-11.:b").is_err());
+        assert!(assert_compliant_nqn("nqn.2023-11.:banana").is_err());
+
+        // No discovery.
+        assert!(assert_compliant_nqn("nqn.2014-08.org.nvmexpress.discovery").is_err());
 
         // org.nvmexpress
         assert!(assert_compliant_nqn("nqn.2023-11.org.nvmexpress:blah").is_err());
