@@ -28,6 +28,8 @@
   };
   testScript = let
     subnqn = "nqn.2023-11.sh.tty:nvmetcfg-test-loop";
+    initiator1 = "nqn.2024-02.sh.tty:nvmetcfg-client1";
+    initiator2 = "nqn.2024-02.sh.tty:nvmetcfg-client2";
   in ''
     start_all()
     target.wait_for_unit("default.target")
@@ -40,6 +42,20 @@
     target.succeed("nvmet subsystem add ${subnqn}")
     assert "${subnqn}" in target.succeed("nvmet subsystem list")
     target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}")
+
+    target.succeed("nvmet subsystem add-host ${subnqn} ${initiator1}")
+    target.succeed("test -d /sys/kernel/config/nvmet/hosts/${initiator1}")
+    target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/allowed_hosts/${initiator1}")
+    assert "${initiator1}" in target.succeed("nvmet subsystem list-hosts ${subnqn}")
+    target.succeed("nvmet subsystem add-host ${subnqn} ${initiator2}")
+    target.succeed("test -d /sys/kernel/config/nvmet/hosts/${initiator2}")
+    target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/allowed_hosts/${initiator2}")
+    assert "${initiator2}" in target.succeed("nvmet subsystem list-hosts ${subnqn}")
+    target.succeed("nvmet subsystem remove-host ${subnqn} ${initiator1}")
+    target.fail("test -e /sys/kernel/config/nvmet/hosts/${initiator1}")
+    target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}/allowed_hosts/${initiator1}")
+    assert "${initiator1}" not in target.succeed("nvmet subsystem list-hosts ${subnqn}")
+
     target.succeed("nvmet subsystem show")
 
     target.succeed("nvmet namespace add ${subnqn} 1 /dev/loop0")
@@ -80,12 +96,18 @@
 
     # Test the target on the initiator.
     initiator.wait_for_unit("default.target")
-    assert "${subnqn}" in initiator.succeed("nvme discover -t tcp -a target -s 4420")
+    clientnqn = initiator.succeed("nvme show-hostnqn")
+    target.succeed("nvmet subsystem add-host ${subnqn} " + clientnqn)
+    assert "${subnqn}" in initiator.succeed("nvme discover -t tcp -a target -s 4420 -q " + clientnqn)
 
     # Cleanup.
     target.succeed("nvmet namespace remove ${subnqn} 1")
     target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     target.fail("nvmet namespace remove ${subnqn} 1")
+
+    target.succeed("nvmet port remove-subsystem 1 ${subnqn}")
+    assert "${subnqn}" not in target.succeed("nvmet port list-subsystems 1")
+    target.fail("test -e /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
 
     target.succeed("nvmet subsystem remove ${subnqn}")
     target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}")
@@ -94,6 +116,9 @@
     target.succeed("nvmet port remove 1")
     target.fail("test -e /sys/kernel/config/nvmet/ports/1")
     target.fail("nvmet port remove 1")
+
+    target.fail("test -e /sys/kernel/config/nvmet/hosts/${initiator2}")
+    target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}/allowed_hosts/${initiator2}")
 
     # Export coverage.
     target.succeed("llvm-profdata merge --sparse -o /tmp/nvmetcfg.profdata /tmp/nvmetcfg-*.profraw")

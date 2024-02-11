@@ -70,6 +70,10 @@
     node.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     node.fail("nvmet namespace remove ${subnqn} 1")
 
+    node.succeed("nvmet port remove-subsystem 1 ${subnqn}")
+    assert "${subnqn}" not in node.succeed("nvmet port list-subsystems 1")
+    node.fail("test -e /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
+
     node.succeed("nvmet subsystem remove ${subnqn}")
     node.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}")
     node.fail("nvmet subsystem remove ${subnqn}")
