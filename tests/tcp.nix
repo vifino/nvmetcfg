@@ -85,10 +85,12 @@
     target.succeed("nvmet state clear")
     target.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}")
     target.fail("test -e /sys/kernel/config/nvmet/ports/1")
+    assert "no config" in target.succeed("nvmet state clear")
 
     target.succeed("nvmet state restore /root/state.yml")
     target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     target.succeed("test -d /sys/kernel/config/nvmet/ports/1")
+    assert "no changes" in target.succeed("nvmet state restore /root/state.yml")
 
     target.succeed("nvmet state save /root/state-after.yml")
     target.succeed("test -f /root/state-after.yml")

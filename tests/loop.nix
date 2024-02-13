@@ -56,10 +56,12 @@
     node.succeed("nvmet state clear")
     node.fail("test -e /sys/kernel/config/nvmet/subsystems/${subnqn}")
     node.fail("test -e /sys/kernel/config/nvmet/ports/1")
+    assert "no config" in node.succeed("nvmet state clear")
 
     node.succeed("nvmet state restore /root/state.yml")
     node.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     node.succeed("test -d /sys/kernel/config/nvmet/ports/1")
+    assert "no changes" in node.succeed("nvmet state restore /root/state.yml")
 
     node.succeed("nvmet state save /root/state-after.yml")
     node.succeed("test -f /root/state-after.yml")
