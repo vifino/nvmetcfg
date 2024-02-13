@@ -45,6 +45,7 @@
 
     # Create our subsystems.
     target.succeed("nvmet subsystem add ${subnqn}")
+    target.succeed("nvmet subsystem update ${subnqn} --model RDMA --serial 1337")
     assert "${subnqn}" in target.succeed("nvmet subsystem list")
     target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}")
 
@@ -64,6 +65,7 @@
     target.succeed("nvmet subsystem show")
 
     target.succeed("nvmet namespace add ${subnqn} 1 /dev/loop0")
+    target.succeed("nvmet namespace update ${subnqn} 1 /dev/loop0")
     assert "1" in target.succeed("nvmet namespace list ${subnqn}")
     target.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     assert "/dev/loop0" in target.succeed("cat /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1/device_path")
@@ -71,6 +73,8 @@
 
     # Create the tcp port.
     target.succeed("nvmet port add 1 rdma 0.0.0.0:4420")
+    target.succeed("nvmet port update 1 loop")
+    target.succeed("nvmet port update 1 rdma 0.0.0.0:4420")
     assert "1" in target.succeed("nvmet port list")
     target.succeed("test -d /sys/kernel/config/nvmet/ports/1")
     assert "rdma" in target.succeed("cat /sys/kernel/config/nvmet/ports/1/addr_trtype")
@@ -81,6 +85,7 @@
     target.succeed("nvmet port add-subsystem 1 ${subnqn}")
     assert "${subnqn}" in target.succeed("nvmet port list-subsystems 1")
     target.succeed("test -h /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
+    target.fail("nvmet port list-subsystems 69")
     target.succeed("nvmet port show")
 
     # State save/restore test.

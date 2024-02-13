@@ -25,9 +25,31 @@ pub enum CliSubsystemCommands {
         sub: String,
 
         /// Set the model.
+        #[arg(long)]
         model: Option<String>,
 
         /// Set the serial.
+        #[arg(long)]
+        serial: Option<String>,
+    },
+    /// Update an existing Subsystem.
+    Update {
+        /// NVMe Qualified Name of the Subsystem.
+        /// This should follow the supported formats in the NVMe specification.
+        ///
+        /// Examples:
+        ///
+        /// - nqn.2014-08.com.example:nvme.host.sys.xyz
+        ///
+        /// - nqn.2014-08.org.nvmexpress:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+        sub: String,
+
+        /// Set the model.
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Set the serial.
+        #[arg(long)]
         serial: Option<String>,
     },
     /// Remove an existing Subsystem.
@@ -101,6 +123,24 @@ impl CliSubsystemCommands {
                         namespaces: BTreeMap::new(),
                     },
                 )])?;
+            }
+            Self::Update { sub, model, serial } => {
+                assert_compliant_nqn(&sub)?;
+                let mut sub_delta = Vec::with_capacity(1);
+
+                if let Some(model) = model {
+                    sub_delta.push(SubsystemDelta::UpdateModel(model));
+                }
+
+                if let Some(serial) = serial {
+                    sub_delta.push(SubsystemDelta::UpdateSerial(serial));
+                }
+
+                if sub_delta.is_empty() {
+                    return Err(Error::UpdateNoChanges.into());
+                } else {
+                    KernelConfig::apply_delta(vec![StateDelta::UpdateSubsystem(sub, sub_delta)])?
+                }
             }
             Self::Remove { sub } => {
                 assert_valid_nqn(&sub)?;

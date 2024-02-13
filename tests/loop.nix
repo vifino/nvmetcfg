@@ -26,11 +26,13 @@
 
     # Create our subsystems.
     node.succeed("nvmet subsystem add ${subnqn}")
+    node.succeed("nvmet subsystem update ${subnqn} --model Loop --serial 1337")
     assert "${subnqn}" in node.succeed("nvmet subsystem list")
     node.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}")
     node.succeed("nvmet subsystem show")
 
     node.succeed("nvmet namespace add ${subnqn} 1 /dev/loop0")
+    node.succeed("nvmet namespace update ${subnqn} 1 /dev/loop0")
     assert "1" in node.succeed("nvmet namespace list ${subnqn}")
     node.succeed("test -d /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1")
     assert "/dev/loop0" in node.succeed("cat /sys/kernel/config/nvmet/subsystems/${subnqn}/namespaces/1/device_path")
@@ -38,6 +40,7 @@
 
     # Create the loopback port.
     node.succeed("nvmet port add 1 loop")
+    node.succeed("nvmet port update 1 loop")
     assert "1" in node.succeed("nvmet port list")
     node.succeed("test -d /sys/kernel/config/nvmet/ports/1")
     assert "loop" in node.succeed("cat /sys/kernel/config/nvmet/ports/1/addr_trtype")
@@ -45,6 +48,7 @@
     node.succeed("nvmet port add-subsystem 1 ${subnqn}")
     assert "${subnqn}" in node.succeed("nvmet port list-subsystems 1")
     node.succeed("test -h /sys/kernel/config/nvmet/ports/1/subsystems/${subnqn}")
+    node.fail("nvmet port list-subsystems 69")
     node.succeed("nvmet port show")
 
     assert "${subnqn}" in machine.succeed("nvme discover -t loop")

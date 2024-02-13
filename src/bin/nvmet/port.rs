@@ -14,10 +14,31 @@ pub enum CliPortCommands {
     List,
     /// Create a new Port.
     Add {
-        /// Allow reconfiguring existing Port.
-        #[arg(long)]
-        existing: bool,
+        /// Port ID to use.
+        pid: u16,
 
+        /// Type of Port.
+        port_type: CliPortType,
+
+        /// Port Address to use.
+        ///
+        /// For Tcp and Rdma port types, this should be an IP address and Port:
+        /// IPv4: 1.2.3.4:4420
+        /// IPv6: [::1]:4420
+        ///
+        /// For Fibre Channel transport, this should be the WWNN/WWPN in the following format:
+        /// Long:  nn-0x1000000044001123:pn-0x2000000055001123
+        /// Short: nn-1000000044001123:pn-2000000055001123
+        #[arg(
+            verbatim_doc_comment,
+            required_if_eq("port_type", "tcp"),
+            required_if_eq("port_type", "rdma"),
+            required_if_eq("port_type", "fc")
+        )]
+        address: Option<String>,
+    },
+    /// Update an existing Port.
+    Update {
         /// Port ID to use.
         pid: u16,
 
@@ -101,7 +122,6 @@ impl CliPortCommands {
                 }
             }
             Self::Add {
-                existing,
                 pid,
                 port_type,
                 address,
@@ -113,14 +133,25 @@ impl CliPortCommands {
                     CliPortType::Fc => PortType::FibreChannel(address.unwrap().parse()?),
                 };
 
-                let state_delta = if existing {
-                    vec![StateDelta::UpdatePort(
-                        pid,
-                        vec![PortDelta::UpdatePortType(pt)],
-                    )]
-                } else {
-                    vec![StateDelta::AddPort(pid, Port::new(pt, BTreeSet::new()))]
+                let state_delta = vec![StateDelta::AddPort(pid, Port::new(pt, BTreeSet::new()))];
+                KernelConfig::apply_delta(state_delta)?;
+            }
+            Self::Update {
+                pid,
+                port_type,
+                address,
+            } => {
+                let pt = match port_type {
+                    CliPortType::Loop => PortType::Loop,
+                    CliPortType::Tcp => PortType::Tcp(address.unwrap().parse()?),
+                    CliPortType::Rdma => PortType::Rdma(address.unwrap().parse()?),
+                    CliPortType::Fc => PortType::FibreChannel(address.unwrap().parse()?),
                 };
+
+                let state_delta = vec![StateDelta::UpdatePort(
+                    pid,
+                    vec![PortDelta::UpdatePortType(pt)],
+                )];
                 KernelConfig::apply_delta(state_delta)?;
             }
             Self::Remove { pid } => {

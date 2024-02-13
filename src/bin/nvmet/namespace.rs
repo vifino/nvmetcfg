@@ -20,8 +20,31 @@ pub enum CliNamespaceCommands {
         /// NVMe Qualified Name of the Subsystem.
         sub: String,
     },
-    /// Add a namespace to an existing Subsystem.
+    /// Add a Namespace to an existing Subsystem.
     Add {
+        /// NVMe Qualified Name of the Subsystem.
+        sub: String,
+
+        /// Namespace ID of the new namespace.
+        nsid: u32,
+
+        /// Path to the block device.
+        path: PathBuf,
+
+        /// Do not enable it after creation.
+        #[arg(long)]
+        disabled: bool,
+
+        /// Optionally set the UUID.
+        #[arg(long)]
+        uuid: Option<Uuid>,
+
+        /// Optionally set the NGUID.
+        #[arg(long)]
+        nguid: Option<Uuid>,
+    },
+    /// Update an existing Namespace of a Subsystem.
+    Update {
         /// NVMe Qualified Name of the Subsystem.
         sub: String,
 
@@ -107,6 +130,26 @@ impl CliNamespaceCommands {
                 KernelConfig::apply_delta(vec![StateDelta::UpdateSubsystem(
                     sub,
                     vec![SubsystemDelta::AddNamespace(nsid, new_ns)],
+                )])?;
+            }
+            Self::Update {
+                sub,
+                nsid,
+                path,
+                disabled,
+                uuid,
+                nguid,
+            } => {
+                assert_valid_nqn(&sub)?;
+                let new_ns = Namespace {
+                    enabled: !disabled,
+                    device_path: path,
+                    device_uuid: uuid,
+                    device_nguid: nguid,
+                };
+                KernelConfig::apply_delta(vec![StateDelta::UpdateSubsystem(
+                    sub,
+                    vec![SubsystemDelta::UpdateNamespace(nsid, new_ns)],
                 )])?;
             }
             Self::Remove { sub, nsid } => {
