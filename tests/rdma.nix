@@ -9,7 +9,7 @@
     }: {
       environment.systemPackages = with pkgs; [
         self.packages.${system}.nvmetcfg-coverage
-        llvmPackages_latest.bintools
+        llvmPackages_17.bintools
       ];
       boot.kernelModules = ["nvmet" "nvmet_rdma" "rdma_rxe"];
       virtualisation.diskSize = 4096;
