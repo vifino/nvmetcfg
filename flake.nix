@@ -4,9 +4,7 @@
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
   outputs = {
@@ -29,13 +27,16 @@
         packages = rec {
           nvmetcfg = pkgs.callPackage ./. {};
           nvmetcfg-static = pkgs.pkgsStatic.callPackage ./. {};
-          nvmetcfg-coverage = (nvmetcfg.overrideAttrs (o: { RUSTFLAGS = "-C instrument-coverage"; dontStrip = true; }));
+          nvmetcfg-coverage = nvmetcfg.overrideAttrs (o: {
+            RUSTFLAGS = "-C instrument-coverage";
+            dontStrip = true;
+          });
           default = nvmetcfg;
         };
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             (rust-bin.stable.latest.default.override {
-              extensions = [ "llvm-tools-preview" ];
+              extensions = ["llvm-tools-preview"];
             })
             cargo-bloat
             cargo-llvm-cov

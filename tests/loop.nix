@@ -7,7 +7,8 @@
     ...
   }: {
     environment.systemPackages = with pkgs; [
-      self.packages.${system}.nvmetcfg-coverage nvme-cli
+      self.packages.${system}.nvmetcfg-coverage
+      nvme-cli
       llvmPackages_17.bintools
     ];
     boot.kernelModules = ["nvmet"];
