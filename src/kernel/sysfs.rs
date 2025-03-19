@@ -27,7 +27,7 @@ impl NvmetRoot {
     pub(super) fn list_used_hosts() -> Result<BTreeSet<String>> {
         let mut hosts = BTreeSet::new();
         let subsystems = Self::list_subsystems()
-            .with_context(|| format!("Failed listing subsystems to list used hosts"))?;
+            .with_context(|| "Failed listing subsystems to list used hosts".to_string())?;
         for sub in subsystems {
             hosts.append(&mut sub.list_hosts().with_context(|| {
                 format!(
