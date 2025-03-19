@@ -171,10 +171,15 @@ impl NvmetPort {
         let trtype = read_str(self.path.join("addr_trtype"))?;
         let traddr = read_str(self.path.join("addr_traddr"))?;
         let trsvcid = read_str(self.path.join("addr_trsvcid"))?;
+        let addr_str = if read_str(self.path.join("addr_adrfam"))? == "ipv6" {
+            format!("[{traddr}]:{trsvcid}")
+        } else {
+            format!("{traddr}:{trsvcid}")
+        };
         match trtype.as_str() {
             "loop" => Ok(PortType::Loop),
-            "tcp" => Ok(PortType::Tcp(format!("{traddr}:{trsvcid}").parse()?)),
-            "rdma" => Ok(PortType::Rdma(format!("{traddr}:{trsvcid}").parse()?)),
+            "tcp" => Ok(PortType::Tcp(addr_str.parse()?)),
+            "rdma" => Ok(PortType::Rdma(addr_str.parse()?)),
             "fc" => Ok(PortType::FibreChannel(traddr.parse()?)),
             _ => Err(Error::UnsupportedTrType(trtype).into()),
         }
