@@ -9,10 +9,17 @@
     }: {
       environment.systemPackages = with pkgs; [
         self.packages.${system}.nvmetcfg-coverage
-        llvmPackages_17.bintools
+        llvmPackages_19.bintools
       ];
       boot.kernelModules = ["nvmet" "nvmet_rdma" "rdma_rxe"];
+      boot.kernelPackages = pkgs.linuxPackages_latest;
       virtualisation.diskSize = 4096;
+      networking.interfaces.eth1.ipv4.addresses = [
+        {
+          address = "192.168.0.1";
+          prefixLength = 24;
+        }
+      ];
       networking.rxe.enable = true;
       networking.rxe.interfaces = ["eth1"];
       networking.firewall.allowedUDPPorts = [4791];
@@ -26,6 +33,13 @@
     }: {
       environment.systemPackages = [pkgs.nvme-cli];
       boot.kernelModules = ["nvme_rdma" "rdma_rxe"];
+      boot.kernelPackages = pkgs.linuxPackages_latest;
+      networking.interfaces.eth1.ipv4.addresses = [
+        {
+          address = "192.168.0.2";
+          prefixLength = 24;
+        }
+      ];
       networking.rxe.enable = true;
       networking.rxe.interfaces = ["eth1"];
       networking.firewall.allowedUDPPorts = [4791];
@@ -109,7 +123,7 @@
     # Test the target on the initiator.
     clientnqn = initiator.succeed("nvme show-hostnqn")
     target.succeed("nvmet subsystem add-host ${subnqn} " + clientnqn)
-    assert "${subnqn}" in initiator.succeed("nvme discover -t rdma -a target -s 4420 -q " + clientnqn)
+    assert "${subnqn}" in initiator.succeed("nvme discover -t rdma -a 192.168.0.1 -s 4420 -q " + clientnqn)
 
     # Cleanup.
     target.succeed("nvmet namespace remove ${subnqn} 1")

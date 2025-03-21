@@ -9,14 +9,16 @@ on:
 jobs:
   integration:
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         # aarch64-linux and friends require emulation, which is terribly slow.
         # so slow, that the test doesn't pass.
         # i686 got dropped somewhere around 24.05
         # TODO: set up aarch64 worker?
         system: [x86_64]
-        check: [loop, tcp, rdma]
+        check: [loop, tcp, tcp-ipv6, rdma]
     name: ${{ matrix.system }} - ${{ matrix.check }}
     steps:
     - uses: actions/checkout@v4

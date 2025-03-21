@@ -9,10 +9,17 @@
     }: {
       environment.systemPackages = with pkgs; [
         self.packages.${system}.nvmetcfg-coverage
-        llvmPackages_17.bintools
+        llvmPackages_19.bintools
       ];
       boot.kernelModules = ["nvmet" "nvmet_tcp"];
+      boot.kernelPackages = pkgs.linuxPackages_latest;
       virtualisation.diskSize = 4096;
+      networking.interfaces.eth1.ipv6.addresses = [
+        {
+          address = "2001:db8::1";
+          prefixLength = 64;
+        }
+      ];
       networking.firewall.allowedTCPPorts = [4420];
       environment.variables.LLVM_PROFILE_FILE = "/tmp/nvmetcfg-%p-%8m.profraw";
     };
@@ -24,6 +31,13 @@
     }: {
       environment.systemPackages = [pkgs.nvme-cli];
       boot.kernelModules = ["nvme_tcp"];
+      boot.kernelPackages = pkgs.linuxPackages_latest;
+      networking.interfaces.eth1.ipv6.addresses = [
+        {
+          address = "2001:db8::2";
+          prefixLength = 64;
+        }
+      ];
     };
   };
   testScript = let
@@ -103,7 +117,7 @@
     initiator.wait_for_unit("default.target")
     clientnqn = initiator.succeed("nvme show-hostnqn")
     target.succeed("nvmet subsystem add-host ${subnqn} " + clientnqn)
-    assert "${subnqn}" in initiator.succeed("nvme discover -t tcp -a target -s 4420 -q " + clientnqn)
+    assert "${subnqn}" in initiator.succeed("nvme discover -t tcp -a 2001:db8::1 -s 4420 -q " + clientnqn)
 
     # Cleanup.
     target.succeed("nvmet namespace remove ${subnqn} 1")

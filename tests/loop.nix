@@ -9,9 +9,10 @@
     environment.systemPackages = with pkgs; [
       self.packages.${system}.nvmetcfg-coverage
       nvme-cli
-      llvmPackages_17.bintools
+      llvmPackages_19.bintools
     ];
     boot.kernelModules = ["nvmet"];
+    boot.kernelPackages = pkgs.linuxPackages_latest;
     virtualisation.diskSize = 4096;
     environment.variables.LLVM_PROFILE_FILE = "/tmp/nvmetcfg-%p-%8m.profraw";
   };
