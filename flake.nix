@@ -35,12 +35,12 @@
         };
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            (rust-bin.stable.latest.default.override {
+            (rust-bin.stable."1.86.0".default.override {
               extensions = ["llvm-tools-preview"];
             })
             cargo-bloat
             cargo-llvm-cov
-            llvmPackages_17.bintools
+            llvmPackages_19.bintools
           ];
         };
 
