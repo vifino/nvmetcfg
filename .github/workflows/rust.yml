@@ -19,7 +19,7 @@ jobs:
       LLVM_PROFILE_FILE: /tmp/nvmetcfg-%p-%8m.profraw
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@nightly
       with:
         components: llvm-tools-preview
@@ -39,7 +39,7 @@ jobs:
           --show-instantiation-summary \
           $(cargo test --tests --no-run --message-format=json | jq -r "select(.profile.test == true) | .filenames[]" | xargs -I {} printf "-object {} ") > nvmetcfg.lcov
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true

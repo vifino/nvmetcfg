@@ -14,16 +14,16 @@ jobs:
         system: [x86_64, i686, aarch64]
     name: ${{ matrix.system }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup QEMU User and binfmt
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
       if: ${{ matrix.system != 'x86_64' && matrix.system != 'i686' }}
     - name: Install Nix
       uses: DeterminateSystems/nix-installer-action@main
       with:
         extra-conf: "extra-platforms = ${{ matrix.system }}-linux"
     - name: Setup Cache Nix Action
-      uses: nix-community/cache-nix-action@v6
+      uses: nix-community/cache-nix-action@v7
       with:
         # restore and save a cache using this key
         primary-key: nix-static-${{ matrix.system }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
@@ -48,7 +48,7 @@ jobs:
         nix build -L $FLAKEREF
         echo "nvmetBinary=$(nix eval --raw $FLAKEREF)/bin/nvmet" >> $GITHUB_ENV
     - name: Upload workflow artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: nvmet-${{ matrix.system }}
         path: ${{ env.nvmetBinary }}

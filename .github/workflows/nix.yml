@@ -21,7 +21,7 @@ jobs:
         check: [loop, tcp, tcp-ipv6, rdma]
     name: ${{ matrix.system }} - ${{ matrix.check }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup QEMU User and binfmt
       uses: docker/setup-qemu-action@v3
       if: ${{ matrix.system != 'x86_64' && matrix.system != 'i686' }}
@@ -30,7 +30,7 @@ jobs:
       with:
         extra-conf: "extra-platforms = ${{ matrix.system }}-linux"
     - name: Setup Cache Nix Action
-      uses: nix-community/cache-nix-action@v6
+      uses: nix-community/cache-nix-action@v7
       with:
         # restore and save a cache using this key
         primary-key: nix-tests-${{ matrix.system }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
@@ -54,7 +54,7 @@ jobs:
     - name: Copy coverage to current directory
       run: cp $(nix eval --raw .#checks.${{ matrix.system }}-linux.${{ matrix.check }})/nvmet.lcov .
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
