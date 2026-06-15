@@ -9,7 +9,7 @@
     }: {
       environment.systemPackages = with pkgs; [
         self.packages.${system}.nvmetcfg-coverage
-        llvmPackages_19.bintools
+        llvmPackages_22.bintools
       ];
       boot.kernelModules = ["nvmet" "nvmet_tcp"];
       boot.kernelPackages = pkgs.linuxPackages_latest;

@@ -9,7 +9,7 @@
     environment.systemPackages = with pkgs; [
       self.packages.${system}.nvmetcfg-coverage
       nvme-cli
-      llvmPackages_19.bintools
+      llvmPackages_22.bintools
     ];
     boot.kernelModules = ["nvmet"];
     boot.kernelPackages = pkgs.linuxPackages_latest;
